@@ -68,6 +68,14 @@ A `public/_headers` Supabase- és workers.dev-címeket enged a kapcsolat számá
 
 ## Offline használat és mentés
 
+A felmérés **Helyiségek** részében alaphelyiségek választhatók (például nappali,
+konyha, hálószoba, fürdőszoba), és egyedi helyiség is felvehető. Minden helyiségnek
+saját fotófeltöltője van: több kép is kiválasztható, és a képek előnézete az adott
+helyiségnél jelenik meg. A helyiséghez rendelést a felmérés **Mentés** gombja rögzíti.
+A képek leválaszthatók; az eredeti fájlok a Dokumentumok között megmaradnak.
+A régi, közös felmérésfotók továbbra is elérhetők az általános képek között.
+Ehhez a változáshoz nem szükséges új Supabase SQL-migráció.
+
 Saját eszközön online bejelentkezés után, a Beállítások / Offline és kapcsolatok alatt engedélyezhető az offline adattár. A projektfájlok külön előkészíthetők és ellenőrizhetők. A helyben mentett változás nem jelent feltöltést: a szinkronsáv mutatja a függő műveleteket és az utolsó egyeztetést. Ez mindig az adott eszköz állapota. Ütközéskor mindkét változat megtekinthető, és kifejezett választás szükséges; az előzmény megmarad.
 
 A helyi titkosítás AES-256-GCM, PBKDF2-SHA256 310 000 iterációval; a nyitott alkalmazás kulcsa memóriában él. Kijelentkezés előtt a függő műveletekre figyelmeztetés jelenik meg. Böngésző-adattörlés, profilcsere vagy tárhely-eltávolítás elveszítheti a csak helyi munkát. Az offline adatbázis nem helyettesíti a független mentést.

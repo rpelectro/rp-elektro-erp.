@@ -93,7 +93,7 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
     .selectOption({ label: "Dugalj szerelés" });
   await dialog().getByRole("button", { name: "Tétel hozzáadása" }).click();
   await dialog().getByLabel("Mennyiség", { exact: true }).fill("2");
-  await dialog().getByRole("button", { name: "Helyiség hozzáadása" }).click();
+  await dialog().getByRole("button", { name: "Helyiség hozzáadása", exact: true }).click();
   await dialog().getByLabel("Helyiség neve").fill("Konyha");
   await dialog().getByRole("button", { name: "Mentés", exact: true }).click();
   await expect(dialog()).not.toBeVisible();

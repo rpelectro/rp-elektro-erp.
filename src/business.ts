@@ -64,6 +64,7 @@ const survey = z.object({
       existing: txt,
       planned: txt,
       lines: z.array(lineSchema),
+      photo_ids: z.array(id).optional(),
     }),
   ),
   whole_property: z.array(lineSchema),

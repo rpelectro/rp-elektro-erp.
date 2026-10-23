@@ -33,6 +33,7 @@ import {
 } from "./business";
 import { Invoices } from "./Invoices";
 import { PhotoPreview } from "./PhotoPreview";
+import { RoomPhotos } from "./RoomPhotos";
 const tabs = [
   "Áttekintés",
   "Felmérés",
@@ -302,17 +303,26 @@ function SurveyEditor({
     },
   );
   const [dirty, mark] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [roomPreset, setRoomPreset] = useState("Nappali");
   const action = useAction();
   const patch = (v: Partial<typeof p>) => {
     mark(true);
-    set({ ...p, ...v });
+    set((previous) => ({ ...previous, ...v }));
   };
   return (
-    <Modal title="Felmérés" onClose={onClose} dirty={dirty}>
+    <Modal
+      title="Felmérés"
+      onClose={() => {
+        if (!uploadBusy) onClose();
+      }}
+      dirty={dirty}
+    >
       {action.feedback}
       <Form
-        busy={action.busy}
+        busy={action.busy || uploadBusy}
         onSave={() =>
+          !uploadBusy &&
           void action.act(async () => {
             await saveEntry(ctx, p, entry);
             await ctx.reload();
@@ -365,8 +375,64 @@ function SurveyEditor({
           onChange={(whole_property) => patch({ whole_property })}
         />
         <h3>Helyiségek</h3>
+        <div className="row">
+          <Select
+            label="Választható helyiség"
+            value={roomPreset}
+            onChange={setRoomPreset}
+            options={[
+              "Nappali",
+              "Konyha",
+              "Étkező",
+              "Hálószoba",
+              "Gyerekszoba",
+              "Fürdőszoba",
+              "WC",
+              "Előszoba",
+              "Folyosó",
+              "Dolgozószoba",
+              "Kamra",
+              "Háztartási helyiség",
+              "Garázs",
+              "Pince",
+              "Padlás",
+              "Terasz",
+              "Kert",
+            ].map((name) => [name, name])}
+          />
+          <button
+            type="button"
+            className="secondary"
+            disabled={uploadBusy}
+            onClick={() => {
+              const count = p.rooms.filter(
+                (r) =>
+                  r.name === roomPreset || r.name.startsWith(`${roomPreset} `),
+              ).length;
+              patch({
+                rooms: [
+                  ...p.rooms,
+                  {
+                    id: crypto.randomUUID(),
+                    name: count ? `${roomPreset} ${count + 1}` : roomPreset,
+                    existing: "",
+                    planned: "",
+                    lines: [],
+                    photo_ids: [],
+                  },
+                ],
+              });
+            }}
+          >
+            Kiválasztott helyiség hozzáadása
+          </button>
+        </div>
         {p.rooms.map((room, i) => (
-          <section className="line-card" key={room.id}>
+          <section
+            className="line-card"
+            key={room.id}
+            aria-label={`Helyiség: ${room.name || "Névtelen"}`}
+          >
             <Text
               label="Helyiség neve"
               required
@@ -413,12 +479,54 @@ function SurveyEditor({
             <button
               type="button"
               className="text-button"
-              onClick={() =>
-                patch({ rooms: p.rooms.filter((_, n) => n !== i) })
-              }
+              disabled={uploadBusy}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Eltávolítod a helyiséget a munkáival és fotó-hozzárendeléseivel? Az eredeti képek megmaradnak a Dokumentumok között.",
+                  )
+                )
+                  patch({ rooms: p.rooms.filter((_, n) => n !== i) });
+              }}
             >
               Helyiség eltávolítása
             </button>
+            <RoomPhotos
+              ctx={ctx}
+              name={room.name}
+              ids={room.photo_ids ?? []}
+              entityId={entry?.id}
+              onBusy={setUploadBusy}
+              locked={uploadBusy || action.busy}
+              onAdd={(id) => {
+                mark(true);
+                set((previous) => ({
+                  ...previous,
+                  rooms: previous.rooms.map((r) =>
+                    r.id === room.id
+                      ? {
+                          ...r,
+                          photo_ids: [...new Set([...(r.photo_ids ?? []), id])],
+                        }
+                      : r,
+                  ),
+                }));
+              }}
+              onRemove={(id) =>
+                patch({
+                  rooms: p.rooms.map((r) =>
+                    r.id === room.id
+                      ? {
+                          ...r,
+                          photo_ids: (r.photo_ids ?? []).filter(
+                            (photo) => photo !== id,
+                          ),
+                        }
+                      : r,
+                  ),
+                })
+              }
+            />
           </section>
         ))}
         <button
@@ -434,6 +542,7 @@ function SurveyEditor({
                   existing: "",
                   planned: "",
                   lines: [],
+                  photo_ids: [],
                 },
               ],
             })
@@ -441,10 +550,19 @@ function SurveyEditor({
         >
           Helyiség hozzáadása
         </button>
-        <h3 className="space-top">Felméréshez kiválasztott fényképek</h3>
+        <h3 className="space-top">
+          Teljes ingatlan / korábbi felmérés fényképei
+        </h3>
+        <p>
+          A szobák képeit fent, közvetlenül a helyiségnél töltsd fel. Itt a
+          helyiséghez nem rendelt, általános képeket választhatod ki.
+        </p>
         <PhotoPicker
           ctx={ctx}
           value={p.photo_ids}
+          excluded={p.rooms
+            .flatMap((room) => room.photo_ids ?? [])
+            .filter((id) => !p.photo_ids.includes(id))}
           onChange={(photo_ids) => patch({ photo_ids })}
         />
       </Form>
@@ -456,10 +574,12 @@ function PhotoPicker({
   ctx,
   value,
   onChange,
+  excluded = [],
 }: {
   ctx: Context;
   value: string[];
   onChange: (v: string[]) => void;
+  excluded?: string[];
 }) {
   return (
     <div>
@@ -467,6 +587,7 @@ function PhotoPicker({
         .filter(
           (e) =>
             e.payload.type === "document" &&
+            !excluded.includes(e.id) &&
             e.payload.mime.startsWith("image/"),
         )
         .map((e) => (

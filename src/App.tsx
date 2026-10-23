@@ -53,6 +53,7 @@ import { Calendar } from "./Calendar";
 import { WorkspaceSettings } from "./WorkspaceSettings";
 import { SyncBar } from "./SyncBar";
 import { Upcoming } from "./Upcoming";
+import { CatalogImport } from "./CatalogImport";
 
 type Page =
   "dashboard" | "projects" | "customers" | "settings" | "calendar" | "invoices";
@@ -665,6 +666,7 @@ export function App({
                   </div>
                   {settingsTab === "catalog" && (
                     <>
+                      <CatalogImport repo={repo} data={data} reload={reload} />
                       <Toolbar
                         search={search}
                         setSearch={setSearch}

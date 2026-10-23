@@ -90,6 +90,20 @@ A teljes, korábban elfogadott specifikáció változatlan másolata: `docs/ELFO
 
 ## Ellenőrzések
 
+### Munkakatalógus tömeges feltöltése
+
+A **Beállítások → Munkakatalógus → Tömeges munkatétel-felvitel** alatt az
+**50 alapvető villanyszerelési munka betöltése** gombbal előkészíthető az alaplista.
+Az **Előnézet és ellenőrzés**, majd a **munkatétel mentése** gomb menti a tételeket
+az aktuálisan megnyitott adattárba. Az alapmunkák munkadíja 0 Ft; ajánlat előtt
+meg kell adni a saját árakat.
+
+Saját lista is bemásolható Excelből tabulátorral, vagy pontosvesszővel elválasztva:
+`név;egység;munkadíj Ft;kategória;leírás`. Csak a név és egység kötelező.
+Egyszerre legfeljebb 500 sor adható meg. Az azonos nevű és egységű meglévő
+tételeket (az archiváltakat is) a rendszer kihagyja; meglévő árakat nem ír felül.
+Mentési hiba után a lista megmarad, és az újrapróbálás kihagyja a már elmentett tételeket.
+
 ```powershell
 npm.cmd test
 ```

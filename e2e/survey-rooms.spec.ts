@@ -61,15 +61,13 @@ test("helyiségenkénti fotók mentés és újranyitás után is külön maradna
       name: `Helyiség: ${name}`,
       exact: true,
     });
-    await room
-      .getByLabel(`${name} – képek feltöltése`)
-      .setInputFiles(
-        files.map((name) => ({
-          name,
-          mimeType: "image/png",
-          buffer: Buffer.concat([png, Buffer.from(name)]),
-        })),
-      );
+    await room.getByLabel(`${name} – képek feltöltése`).setInputFiles(
+      files.map((name) => ({
+        name,
+        mimeType: "image/png",
+        buffer: Buffer.concat([png, Buffer.from(name)]),
+      })),
+    );
     await expect(room.getByRole("img")).toHaveCount(files.length);
     for (const file of files)
       await expect(
@@ -87,6 +85,24 @@ test("helyiségenkénti fotók mentés és újranyitás után is külön maradna
     name: "Helyiség: Konyha",
     exact: true,
   });
+  await expect(
+    living.getByLabel("Helyiség neve", { exact: true }),
+  ).not.toBeVisible();
+  await expect(living.locator("summary")).toContainText("2 kép");
+  await living.locator("summary").click();
+  await kitchen.locator("summary").click();
+  await living
+    .getByLabel("Helyiség meglévő állapota")
+    .fill("Megőrzött szobajegyzet");
+  await living.locator("summary").click();
+  await expect(
+    living.getByLabel("Helyiség meglévő állapota"),
+  ).not.toBeVisible();
+  await living.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(living.getByLabel("Helyiség meglévő állapota")).toHaveValue(
+    "Megőrzött szobajegyzet",
+  );
   await expect(living.getByRole("img")).toHaveCount(2);
   await expect(kitchen.getByRole("img")).toHaveCount(1);
   await expect(
@@ -100,6 +116,12 @@ test("helyiségenkénti fotók mentés és újranyitás után is külön maradna
     .click();
   await dialog.getByRole("button", { name: "Mentés", exact: true }).click();
   await page.getByRole("button", { name: "Megnyitás", exact: true }).click();
+  await expect(living.locator("summary")).toContainText("1 kép");
+  await living.locator("summary").click();
+  await kitchen.locator("summary").click();
+  await expect(living.getByLabel("Helyiség meglévő állapota")).toHaveValue(
+    "Megőrzött szobajegyzet",
+  );
   await expect(living.getByRole("img")).toHaveCount(1);
   await expect(kitchen.getByRole("img")).toHaveCount(1);
 });

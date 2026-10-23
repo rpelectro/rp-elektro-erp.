@@ -324,3 +324,18 @@ pre {
 .dashboard-events p {
   font-size: 12px;
 }
+.survey-room > summary {
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+.survey-room > summary strong {
+  display: inline;
+  margin-right: 1rem;
+}
+.survey-room > summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+.survey-room-content {
+  padding-top: 1rem;
+}

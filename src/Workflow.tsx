@@ -433,100 +433,117 @@ function SurveyEditor({
             key={room.id}
             aria-label={`Helyiség: ${room.name || "Névtelen"}`}
           >
-            <Text
-              label="Helyiség neve"
-              required
-              value={room.name}
-              onChange={(name) =>
-                patch({
-                  rooms: p.rooms.map((r, n) => (n === i ? { ...r, name } : r)),
-                })
-              }
-            />
-            <Text
-              label="Helyiség meglévő állapota"
-              rows={2}
-              value={room.existing}
-              onChange={(existing) =>
-                patch({
-                  rooms: p.rooms.map((r, n) =>
-                    n === i ? { ...r, existing } : r,
-                  ),
-                })
-              }
-            />
-            <Text
-              label="Helyiség tervezett munkája"
-              rows={2}
-              value={room.planned}
-              onChange={(planned) =>
-                patch({
-                  rooms: p.rooms.map((r, n) =>
-                    n === i ? { ...r, planned } : r,
-                  ),
-                })
-              }
-            />
-            <Lines
-              ctx={ctx}
-              value={room.lines}
-              onChange={(lines) =>
-                patch({
-                  rooms: p.rooms.map((r, n) => (n === i ? { ...r, lines } : r)),
-                })
-              }
-            />
-            <button
-              type="button"
-              className="text-button"
-              disabled={uploadBusy}
-              onClick={() => {
-                if (
-                  window.confirm(
-                    "Eltávolítod a helyiséget a munkáival és fotó-hozzárendeléseivel? Az eredeti képek megmaradnak a Dokumentumok között.",
-                  )
-                )
-                  patch({ rooms: p.rooms.filter((_, n) => n !== i) });
-              }}
-            >
-              Helyiség eltávolítása
-            </button>
-            <RoomPhotos
-              ctx={ctx}
+            <CollapsibleRoom
               name={room.name}
-              ids={room.photo_ids ?? []}
-              entityId={entry?.id}
-              onBusy={setUploadBusy}
-              locked={uploadBusy || action.busy}
-              onAdd={(id) => {
-                mark(true);
-                set((previous) => ({
-                  ...previous,
-                  rooms: previous.rooms.map((r) =>
-                    r.id === room.id
-                      ? {
-                          ...r,
-                          photo_ids: [...new Set([...(r.photo_ids ?? []), id])],
-                        }
-                      : r,
-                  ),
-                }));
-              }}
-              onRemove={(id) =>
-                patch({
-                  rooms: p.rooms.map((r) =>
-                    r.id === room.id
-                      ? {
-                          ...r,
-                          photo_ids: (r.photo_ids ?? []).filter(
-                            (photo) => photo !== id,
-                          ),
-                        }
-                      : r,
-                  ),
-                })
+              lines={room.lines.length}
+              photos={room.photo_ids?.length ?? 0}
+              initiallyOpen={
+                !entry ||
+                (entry.payload.type === "survey" &&
+                  !entry.payload.rooms.some((r) => r.id === room.id))
               }
-            />
+            >
+              <Text
+                label="Helyiség neve"
+                required
+                value={room.name}
+                onChange={(name) =>
+                  patch({
+                    rooms: p.rooms.map((r, n) =>
+                      n === i ? { ...r, name } : r,
+                    ),
+                  })
+                }
+              />
+              <Text
+                label="Helyiség meglévő állapota"
+                rows={2}
+                value={room.existing}
+                onChange={(existing) =>
+                  patch({
+                    rooms: p.rooms.map((r, n) =>
+                      n === i ? { ...r, existing } : r,
+                    ),
+                  })
+                }
+              />
+              <Text
+                label="Helyiség tervezett munkája"
+                rows={2}
+                value={room.planned}
+                onChange={(planned) =>
+                  patch({
+                    rooms: p.rooms.map((r, n) =>
+                      n === i ? { ...r, planned } : r,
+                    ),
+                  })
+                }
+              />
+              <Lines
+                ctx={ctx}
+                value={room.lines}
+                onChange={(lines) =>
+                  patch({
+                    rooms: p.rooms.map((r, n) =>
+                      n === i ? { ...r, lines } : r,
+                    ),
+                  })
+                }
+              />
+              <button
+                type="button"
+                className="text-button"
+                disabled={uploadBusy}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Eltávolítod a helyiséget a munkáival és fotó-hozzárendeléseivel? Az eredeti képek megmaradnak a Dokumentumok között.",
+                    )
+                  )
+                    patch({ rooms: p.rooms.filter((_, n) => n !== i) });
+                }}
+              >
+                Helyiség eltávolítása
+              </button>
+              <RoomPhotos
+                ctx={ctx}
+                name={room.name}
+                ids={room.photo_ids ?? []}
+                entityId={entry?.id}
+                onBusy={setUploadBusy}
+                locked={uploadBusy || action.busy}
+                onAdd={(id) => {
+                  mark(true);
+                  set((previous) => ({
+                    ...previous,
+                    rooms: previous.rooms.map((r) =>
+                      r.id === room.id
+                        ? {
+                            ...r,
+                            photo_ids: [
+                              ...new Set([...(r.photo_ids ?? []), id]),
+                            ],
+                          }
+                        : r,
+                    ),
+                  }));
+                }}
+                onRemove={(id) =>
+                  patch({
+                    rooms: p.rooms.map((r) =>
+                      r.id === room.id
+                        ? {
+                            ...r,
+                            photo_ids: (r.photo_ids ?? []).filter(
+                              (photo) => photo !== id,
+                            ),
+                          }
+                        : r,
+                    ),
+                  })
+                }
+              />
+            </CollapsibleRoom>
           </section>
         ))}
         <button
@@ -568,6 +585,37 @@ function SurveyEditor({
       </Form>
       <Upload ctx={ctx} category="photo" entityId={entry?.id} />
     </Modal>
+  );
+}
+function CollapsibleRoom({
+  name,
+  lines,
+  photos,
+  initiallyOpen,
+  children,
+}: {
+  name: string;
+  lines: number;
+  photos: number;
+  initiallyOpen: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(initiallyOpen);
+  return (
+    <details
+      className="survey-room"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      onInvalidCapture={() => setOpen(true)}
+    >
+      <summary>
+        <strong>{name || "Új helyiség"}</strong>
+        <span className="small muted">
+          {lines} munkatétel · {photos} kép
+        </span>
+      </summary>
+      <div className="survey-room-content">{children}</div>
+    </details>
   );
 }
 function PhotoPicker({

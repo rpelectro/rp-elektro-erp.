@@ -1,0 +1,18 @@
+name = "rp-elektro-calendar"
+main = "index.ts"
+compatibility_date = "2026-10-23"
+
+# Fill these with the actual project values before deployment. No secrets here.
+[vars]
+APP_URL = "https://REPLACE.pages.dev"
+SUPABASE_URL = "https://REPLACE.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "REPLACE"
+GOOGLE_CLIENT_ID = "REPLACE.apps.googleusercontent.com"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "erp-calendar"
+database_id = "REPLACE-WITH-D1-ID"
+
+# wrangler secret put GOOGLE_CLIENT_SECRET
+# wrangler secret put TOKEN_SEAL_KEY (base64 encoded 32 random bytes)

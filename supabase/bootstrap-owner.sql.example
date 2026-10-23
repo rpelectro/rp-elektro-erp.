@@ -1,0 +1,7 @@
+-- Run manually in Supabase SQL Editor AFTER creating the owner in Authentication.
+-- Replace the UUID with the real Authentication user ID, NOT an email address.
+-- This file is an example, not an automatic migration. Never run against the old ERP.
+begin;
+insert into public.app_owners(user_id) values ('REPLACE-WITH-AUTH-USER-UUID');
+insert into public.companies(owner_id,name) values ('REPLACE-WITH-AUTH-USER-UUID','RP Elektro');
+commit;

@@ -1,0 +1,87 @@
+import type { PayloadOf, Entry } from "../src/business";
+export const ids = {
+  company: "10000000-0000-4000-8000-000000000001",
+  project: "20000000-0000-4000-8000-000000000001",
+  quote: "30000000-0000-4000-8000-000000000001",
+  invoice: "40000000-0000-4000-8000-000000000001",
+  document: "50000000-0000-4000-8000-000000000001",
+};
+export const party = {
+  name: "Árvíztűrő Tükörfúrógép Kft.",
+  address: "Pécs, Próba út 1.",
+  tax_number: "",
+  email: "teszt@example.com",
+  phone: "",
+};
+export const line = {
+  id: "60000000-0000-4000-8000-000000000001",
+  work_id: null,
+  name: "Dugalj szerelés őű",
+  unit: "db",
+  quantity_milli: 1500,
+  price_minor: 123456,
+  location: "Konyha",
+  notes: "",
+  recipe: [],
+};
+export const quote = (): PayloadOf<"quote"> => ({
+  type: "quote",
+  series_id: ids.quote,
+  revision: 1,
+  sealed: false,
+  number: "AJ-TESZT",
+  title: "Teszt ajánlat",
+  issued_on: "2026-10-23",
+  valid_until: "2026-11-23",
+  company: party,
+  customer: party,
+  site: "Pécs",
+  tax_mode: "vat",
+  vat_basis_points: 2700,
+  lines: [line],
+  materials_minor: 10000,
+  discount_minor: 0,
+  terms: "Teszt feltételek",
+  pdf_id: null,
+});
+export const invoice = (): PayloadOf<"invoice"> => ({
+  type: "invoice",
+  direction: "outgoing",
+  source: "manual",
+  provider: "szamlazz.hu",
+  external_id: null,
+  document_type: "invoice",
+  draft: false,
+  is_test: false,
+  number: "TEST-2026-1",
+  issuer: party,
+  customer: party,
+  issued_on: "2026-10-23",
+  performed_on: "2026-10-23",
+  due_on: "2026-11-01",
+  received_on: null,
+  net_minor: 100000,
+  tax_minor: 27000,
+  gross_minor: 127000,
+  currency: "HUF",
+  method: "Átutalás",
+  relation_ids: [],
+  advance_deduction_minor: 0,
+  notes: "",
+});
+export function entry(
+  payload: Entry["payload"],
+  id: string = crypto.randomUUID(),
+): Entry {
+  return {
+    id,
+    company_id: ids.company,
+    project_id: ids.project,
+    payload,
+    source_system: "",
+    source_id: "",
+    version: 1,
+    created_at: "2026-10-23T10:00:00.000Z",
+    updated_at: "2026-10-23T10:00:00.000Z",
+  };
+}

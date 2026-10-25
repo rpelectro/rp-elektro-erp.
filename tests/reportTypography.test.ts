@@ -5,6 +5,20 @@ import {
   wrapReportRuns,
 } from "../src/reportTypography";
 
+it("a félkövér és dőlt formázást együtt is megőrzi", () => {
+  expect(reportInline("***Fontos*** és *dőlt* szöveg")).toEqual([
+    { text: "Fontos", bold: true, italic: true },
+    { text: " és ", bold: false },
+    { text: "dőlt", bold: false, italic: true },
+    { text: " szöveg", bold: false },
+  ]);
+  expect(
+    reportInline("azonosito_resz és \\*csillag\\*")
+      .map((run) => run.text)
+      .join(""),
+  ).toBe("azonosito_resz és *csillag*");
+});
+
 it("szóhatáron tördel, a kiemelés közepén kezdődő szó sem szakad ketté", () => {
   const lines = wrapReportRuns(
     reportInline("A **villamos** hálózat állapota"),

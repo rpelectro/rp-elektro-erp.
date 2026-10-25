@@ -1192,6 +1192,7 @@ function EditorDialog({
         key={formVersion}
         onSubmit={submit}
         onChange={() => setDirty(true)}
+        onInput={() => setDirty(true)}
       >
         <div className="dialog-body">
           {error && (

@@ -17,8 +17,13 @@ export async function makeReportPdf(
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
-  const [regular, bold] = await Promise.all(
-    ["DejaVuSans.ttf", "DejaVuSans-Bold.ttf"].map(async (name) => {
+  const [regular, bold, italic, boldItalic] = await Promise.all(
+    [
+      "DejaVuSans.ttf",
+      "DejaVuSans-Bold.ttf",
+      "DejaVuSans-Oblique.ttf",
+      "DejaVuSans-BoldOblique.ttf",
+    ].map(async (name) => {
       const response = await fetch(`${import.meta.env.BASE_URL}fonts/${name}`);
       if (!response.ok)
         throw new Error("A magyar betűkészlet nem tölthető be.");
@@ -91,12 +96,17 @@ export async function makeReportPdf(
   };
   const wrapped = (text: string, size: number, strong = false, max = width) =>
     wrapReportRuns(
-      strong
-        ? [{ text: text.replace(/\*\*/g, ""), bold: true }]
-        : reportInline(text),
+      reportInline(text).map((run) => ({ ...run, bold: strong || run.bold })),
       max,
-      (value, strong) =>
-        (strong ? bold : regular).widthOfTextAtSize(value, size),
+      (value, strong, slanted) =>
+        (slanted
+          ? strong
+            ? boldItalic
+            : italic
+          : strong
+            ? bold
+            : regular
+        ).widthOfTextAtSize(value, size),
     );
   const drawLine = (
     runs: InlineRun[],
@@ -105,7 +115,13 @@ export async function makeReportPdf(
     color = ink,
   ) => {
     for (const run of runs) {
-      const font = run.bold ? bold : regular;
+      const font = run.italic
+        ? run.bold
+          ? boldItalic
+          : italic
+        : run.bold
+          ? bold
+          : regular;
       page.drawText(run.text, { x, y, size, font, color });
       x += font.widthOfTextAtSize(run.text, size);
     }

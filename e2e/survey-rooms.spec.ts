@@ -79,7 +79,7 @@ test("teljes oldalas felmérés: fülek, keresés, mentés, fotók, mobil és PD
     exact: true,
   });
   await text.fill(longText);
-  await text.evaluate((node: HTMLTextAreaElement) => {
+  await workspace.locator(".rich-editor-scroll:visible").evaluate((node) => {
     node.scrollTop = 400;
   });
   await workspace
@@ -91,22 +91,36 @@ test("teljes oldalas felmérés: fülek, keresés, mentés, fotók, mobil és PD
   await workspace
     .getByRole("tab", { name: "Meglévő állapot", exact: true })
     .click();
-  await expect(text).toHaveValue(longText);
-  await expect(text).toHaveJSProperty("scrollTop", 400);
-  await expect(workspace.locator("textarea:visible")).toHaveCount(1);
+  await expect
+    .poll(async () =>
+      (await text.innerText())
+        .replace(/^\d+\.\s/gm, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .toBe(
+      longText
+        .replace(/^\d+\.\s/gm, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
+  await expect(
+    workspace.locator(".rich-editor-scroll:visible"),
+  ).toHaveJSProperty("scrollTop", 400);
+  await expect(workspace.locator(".rich-text-content:visible")).toHaveCount(1);
   await workspace
     .getByLabel("Keresés a szövegben", { exact: true })
     .fill("VÉGSŐ ÁLLAPOTLEÍRÁS");
   await workspace
     .getByRole("button", { name: "Következő találat", exact: true })
     .click();
+  expect(await text.evaluate(() => window.getSelection()?.toString())).toBe(
+    "VÉGSŐ ÁLLAPOTLEÍRÁS",
+  );
   expect(
-    await text.evaluate((node: HTMLTextAreaElement) =>
-      node.value.slice(node.selectionStart, node.selectionEnd),
-    ),
-  ).toBe("VÉGSŐ ÁLLAPOTLEÍRÁS");
-  expect(
-    await text.evaluate((node: HTMLTextAreaElement) => node.scrollTop),
+    await workspace
+      .locator(".rich-editor-scroll:visible")
+      .evaluate((node) => node.scrollTop),
   ).toBeGreaterThan(400);
   await workspace
     .getByRole("tab", { name: "Belső megjegyzés", exact: true })
@@ -223,11 +237,23 @@ test("teljes oldalas felmérés: fülek, keresés, mentés, fotók, mobil és PD
   await back();
   await page.getByRole("button", { name: "Megnyitás", exact: true }).click();
   await go("Leírások");
-  await expect(text).toHaveValue(longText);
+  await expect
+    .poll(async () =>
+      (await text.innerText())
+        .replace(/^\d+\.\s/gm, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .toBe(
+      longText
+        .replace(/^\d+\.\s/gm, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
   expect(
-    await text.evaluate(
-      (node: HTMLTextAreaElement) => node.scrollHeight > node.clientHeight,
-    ),
+    await workspace
+      .locator(".rich-editor-scroll:visible")
+      .evaluate((node) => node.scrollHeight > node.clientHeight),
   ).toBe(true);
   await page.screenshot({
     path: info.outputPath("survey-desktop.png"),
@@ -253,7 +279,7 @@ test("teljes oldalas felmérés: fülek, keresés, mentés, fotók, mobil és PD
   await go(/^Nappali/);
   await expect(
     living.getByLabel("Helyiség meglévő állapota", { exact: true }),
-  ).toHaveValue("Megőrzött szobajegyzet");
+  ).toHaveText("Megőrzött szobajegyzet");
   await expect(living.getByRole("img")).toHaveCount(1);
   await page.setViewportSize({ width: 390, height: 844 });
   await workspace

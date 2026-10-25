@@ -1,4 +1,5 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
+import { RichTextField, type RichTextHandle } from "./RichTextField";
 
 export function SurveyTextEditor({
   fields,
@@ -10,7 +11,8 @@ export function SurveyTextEditor({
   const [active, setActive] = useState(fields[0].key);
   const [query, setQuery] = useState("");
   const [match, setMatch] = useState(-1);
-  const editor = useRef<HTMLTextAreaElement>(null);
+  const editor = useRef<RichTextHandle>(null);
+  const [visibleText, setVisibleText] = useState("");
   const search = useRef<HTMLInputElement>(null);
   const positions = useRef<Record<string, number>>({});
   const id = useId();
@@ -18,7 +20,7 @@ export function SurveyTextEditor({
   const matches = useMemo(() => {
     const result: number[] = [];
     if (!query) return result;
-    const value = field.value.toLocaleLowerCase("hu"),
+    const value = visibleText.toLocaleLowerCase("hu"),
       term = query.toLocaleLowerCase("hu");
     for (
       let at = value.indexOf(term);
@@ -27,11 +29,7 @@ export function SurveyTextEditor({
     )
       result.push(at);
     return result;
-  }, [field.value, query]);
-  useLayoutEffect(() => {
-    if (editor.current)
-      editor.current.scrollTop = positions.current[field.key] ?? 0;
-  }, [field.key]);
+  }, [visibleText, query]);
   function find(direction: number) {
     if (!matches.length || !editor.current) return;
     const next =
@@ -41,37 +39,9 @@ export function SurveyTextEditor({
           : matches.length - 1
         : (match + direction + matches.length) % matches.length;
     setMatch(next);
-    editor.current.focus({ preventScroll: true });
-    editor.current.setSelectionRange(
-      matches[next],
-      matches[next] + query.length,
-    );
-    // Selection is preserved; approximate scrolling also works in browsers that do not scroll to setSelectionRange.
-    const prefix = field.value.slice(0, matches[next]);
-    const style = getComputedStyle(editor.current),
-      lineHeight = parseFloat(style.lineHeight);
-    const canvas = document.createElement("canvas"),
-      ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.font = style.font;
-      const width =
-        editor.current.clientWidth -
-        parseFloat(style.paddingLeft) -
-        parseFloat(style.paddingRight);
-      const lines = prefix
-        .split("\n")
-        .reduce(
-          (sum, line) =>
-            sum +
-            Math.max(
-              1,
-              Math.ceil(ctx.measureText(line).width / Math.max(1, width)),
-            ),
-          0,
-        );
-      editor.current.scrollTop = Math.max(0, (lines - 3) * lineHeight);
-    }
+    editor.current.selectText(matches[next], matches[next] + query.length);
   }
+
   return (
     <div className="survey-text-editor">
       <div
@@ -163,36 +133,22 @@ export function SurveyTextEditor({
               : ""}
           </span>
         </div>
-        <label className="survey-editor-label" htmlFor={`${id}-text`}>
-          {field.label}
-        </label>
-        <textarea
-          id={`${id}-text`}
+        <RichTextField
+          key={field.key}
           ref={editor}
-          className="survey-editor-text"
+          label={field.label}
           value={field.value}
-          maxLength={10000}
-          onScroll={(event) => {
-            positions.current[field.key] = event.currentTarget.scrollTop;
-          }}
-          onChange={(event) => {
-            onChange(field.key, event.target.value);
+          onChange={(value) => {
+            onChange(field.key, value);
             setMatch(-1);
           }}
-          onKeyDown={(event) => {
-            if (
-              (event.ctrlKey || event.metaKey) &&
-              event.key.toLowerCase() === "f"
-            ) {
-              event.preventDefault();
-              search.current?.focus();
-            }
+          onPlainText={setVisibleText}
+          initialScroll={positions.current[field.key] ?? 0}
+          onScroll={(top) => {
+            positions.current[field.key] = top;
           }}
+          onFind={() => search.current?.focus()}
         />
-        <div className="small muted survey-editor-hint">
-          {field.value.length} / 10 000 karakter · A szöveg a Mentés gombbal
-          rögzíthető.
-        </div>
       </div>
     </div>
   );

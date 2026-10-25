@@ -661,3 +661,93 @@ textarea.survey-editor-text {
     white-space: normal;
   }
 }
+.rich-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  background: #f7f8fa;
+  border: 1px solid #dfe4e9;
+  border-radius: 6px 6px 0 0;
+  margin-top: 8px;
+}
+.rich-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 7px 9px;
+  background: transparent;
+  color: #2d3943;
+  font-size: 12px;
+}
+.rich-toolbar button:hover,
+.rich-toolbar button[aria-pressed="true"] {
+  background: #fff1be;
+  border-color: #e9b62e;
+}
+.rich-editor-scroll {
+  height: clamp(300px, 55dvh, 650px);
+  overflow-y: auto;
+  resize: vertical;
+  border: 1px solid #dfe4e9;
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+  background: white;
+  scrollbar-gutter: stable;
+}
+.rich-editor-scroll:focus-within {
+  outline: 2px solid #b88b24;
+  outline-offset: 1px;
+}
+.rich-text-content {
+  min-height: 100%;
+  padding: 16px;
+  outline: none;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #2d3943;
+  overflow-wrap: anywhere;
+}
+.rich-text-content p {
+  margin: 0 0 0.8em;
+}
+.rich-text-content h1 {
+  font-size: 24px;
+  margin: 1em 0 0.5em;
+}
+.rich-text-content h2 {
+  font-size: 20px;
+  margin: 1em 0 0.5em;
+}
+.rich-text-content h3 {
+  font-size: 17px;
+  margin: 1em 0 0.5em;
+}
+.rich-text-content ul,
+.rich-text-content ol {
+  padding-left: 26px;
+  margin: 0.5em 0 1em;
+}
+.rich-text-content li p {
+  margin: 0;
+}
+.rich-text-content strong {
+  font-weight: 700;
+  font-size: inherit;
+}
+.rich-text-content em {
+  font-style: italic;
+}
+.rich-text-content .ProseMirror-selectednode {
+  outline: 2px solid #e9b62e;
+}
+@media (max-width: 600px) {
+  .rich-toolbar button span {
+    display: none;
+  }
+  .rich-toolbar button {
+    padding: 9px;
+  }
+}

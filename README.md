@@ -84,6 +84,15 @@ egyszerre egy nagy, belül görgethető szerkesztővel. A meglévő hosszú szö
 görgethető, fülváltáskor megmarad a tartalom és a görgetési hely. A keresővel és az
 Előző/Következő találat gombokkal a hosszú leírásban is lehet navigálni.
 
+A leírások vizuális, Office-szerű szerkesztőt használnak. Szövegkijelölés után a
+**Félkövér** és **Dőlt** gombbal formázhatsz; külön gomb van a címsorokhoz,
+felsorolásokhoz és számozott listákhoz. A Ctrl+B, Ctrl+I, visszavonás és ismétlés
+is használható. Nem kell Markdown-jeleket gépelni. A korábbi leírások automatikusan
+formázottan nyílnak meg, a módosítások továbbra is a Mentés gombbal rögzíthetők.
+A félkövér, dőlt, címsoros és listás formázás a projektkivonatokban, valamint az
+ajánlat és átadás végleges PDF-jében is megmarad. A meglévő szöveges adattárolás
+és mentési formátum változatlan, új Supabase-migráció nem szükséges.
+
 A fejlécben mindig elérhető a **Mentés**, **PDF letöltése** és **Vissza a projekthez**.
 A mentés a munkaterületen tart, a következő mentés az új verziót használja.
 A részek közötti váltás nem dobja el a módosításokat. Mentetlen felmérés

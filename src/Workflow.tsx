@@ -36,6 +36,7 @@ import { SurveyWorkspace } from "./SurveyWorkspace";
 import { ReportButton } from "./ReportButton";
 import { RecordWorkspace, WorkspaceSection } from "./RecordWorkspace";
 import { SurveyTextEditor } from "./SurveyTextEditor";
+import { FormattedText } from "./FormattedText";
 const tabs = [
   "Áttekintés",
   "Felmérés",
@@ -882,7 +883,7 @@ function SummaryQuote({ p }: { p: PayloadOf<"quote"> }) {
         <strong>{formatMoney(quoteTotals(p).gross)}</strong> · érvényes{" "}
         {p.valid_until}
       </p>
-      <p className="prewrap">{p.terms}</p>
+      <FormattedText value={p.terms} />
     </>
   );
 }
@@ -1579,7 +1580,7 @@ function HandoverSummary({ p }: { p: PayloadOf<"handover"> }) {
       ].map(([name, v]) => (
         <div key={name}>
           <strong>{name}</strong>
-          <p className="prewrap">{v || "Nincs rögzítve."}</p>
+          <FormattedText value={v || "Nincs rögzítve."} />
         </div>
       ))}
       <p>

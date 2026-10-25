@@ -156,12 +156,26 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await section("Munkatételek");
   await section("Vállalási feltételek");
-  await expect(
-    dialog().getByRole("textbox", {
-      name: "Fizetési és vállalási feltételek",
-      exact: true,
-    }),
-  ).toHaveValue(terms);
+  await expect
+    .poll(async () =>
+      (
+        await dialog()
+          .getByRole("textbox", {
+            name: "Fizetési és vállalási feltételek",
+            exact: true,
+          })
+          .innerText()
+      )
+        .replace(/^\d+\.\s/gm, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .toBe(
+      terms
+        .replace(/^\d+\.\s/gm, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
   await dialog().getByRole("button", { name: "Mentés", exact: true }).click();
   await expect(
     dialog().getByText("Ajánlattervezet elmentve.", { exact: true }),

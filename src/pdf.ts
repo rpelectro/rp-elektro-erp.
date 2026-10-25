@@ -1,3 +1,8 @@
+import {
+  reportInline,
+  reportParagraphs,
+  wrapReportRuns,
+} from "./reportTypography";
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import {
@@ -27,6 +32,20 @@ export async function makePdf(
   const font = await pdf.embedFont(await response.arrayBuffer(), {
     subset: true,
   });
+  const [boldFont, italicFont, boldItalicFont] = await Promise.all(
+    [
+      "DejaVuSans-Bold.ttf",
+      "DejaVuSans-Oblique.ttf",
+      "DejaVuSans-BoldOblique.ttf",
+    ].map(async (name) => {
+      const response = await fetch(`${import.meta.env.BASE_URL}fonts/${name}`);
+      if (!response.ok)
+        throw new Error("A magyar betűkészlet nem tölthető be.");
+      return pdf.embedFont(await response.arrayBuffer(), { subset: true });
+    }),
+  );
+  const pickFont = (bold: boolean, italic?: boolean) =>
+    italic ? (bold ? boldItalicFont : italicFont) : bold ? boldFont : font;
   let page: PDFPage,
     y = 0;
   let pageNo = 0;
@@ -46,31 +65,58 @@ export async function makePdf(
     if (y - height < 60) newPage();
   };
   const text = (value: string, size = 10, bold = false) => {
-    const max = 510;
-    const lines: string[] = [];
-    for (const para of value.replace(/\r/g, "").split("\n")) {
-      let line = "";
-      for (const character of para) {
-        if (font.widthOfTextAtSize(line + character, size) > max) {
-          lines.push(line);
-          line = "";
-        }
-        line += character;
+    for (const para of reportParagraphs(value)) {
+      if (para.kind === "rule") {
+        ensure(18);
+        page.drawLine({
+          start: { x: 42, y },
+          end: { x: 552, y },
+          thickness: 0.5,
+          color: rgb(0.8, 0.8, 0.8),
+        });
+        y -= 14;
+        continue;
       }
-      lines.push(line);
+      const heading = bold || para.kind === "heading",
+        fontSize =
+          para.kind === "heading"
+            ? Math.max(size, para.level! <= 2 ? 13 : 11)
+            : size;
+      const inset = para.kind === "list" ? 20 : 0;
+      const runs = reportInline(para.text).map((run) => ({
+        ...run,
+        bold: heading || run.bold,
+      }));
+      const lines = wrapReportRuns(runs, 510 - inset, (text, bold, italic) =>
+        pickFont(bold, italic).widthOfTextAtSize(text, fontSize),
+      );
+      if (heading) ensure(fontSize * lines.length + 45);
+      for (const [index, line] of lines.entries()) {
+        ensure(fontSize + 7);
+        let x = 42 + inset;
+        if (index === 0 && para.marker)
+          page.drawText(para.marker, {
+            x: 42,
+            y,
+            font,
+            size: fontSize,
+            color: rgb(0.25, 0.29, 0.32),
+          });
+        for (const run of line) {
+          const selected = pickFont(run.bold, run.italic);
+          page.drawText(run.text, {
+            x,
+            y,
+            size: fontSize,
+            font: selected,
+            color: rgb(0.12, 0.16, 0.18),
+          });
+          x += selected.widthOfTextAtSize(run.text, fontSize);
+        }
+        y -= fontSize + 7;
+      }
+      y -= para.kind === "list" ? 3 : 7;
     }
-    for (const line of lines) {
-      ensure(size + 7);
-      page.drawText(line, {
-        x: 42,
-        y,
-        size,
-        font,
-        color: bold ? rgb(0.12, 0.16, 0.18) : rgb(0.25, 0.29, 0.32),
-      });
-      y -= size + 7;
-    }
-    y -= 4;
   };
   const image = async (bytes: Uint8Array, mime: string, height = 150) => {
     const converted = await picture(bytes, mime);

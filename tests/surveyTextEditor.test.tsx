@@ -31,21 +31,18 @@ it("a szöveg nevű mező is egyértelműen elérhető, fülváltáskor megőrzi
   }
   render(<Editor />);
   fireEvent.change(
-    screen.getByRole("textbox", { name: "Ajánlat feltételei", exact: true }),
+    screen.getByRole("textbox", { name: "Ajánlat feltételei" }),
     { target: { value: "Módosított feltételek" } },
   );
-  fireEvent.keyDown(
-    screen.getByRole("tab", { name: "Feltételek", exact: true }),
-    { key: "ArrowRight" },
+  fireEvent.keyDown(screen.getByRole("tab", { name: "Feltételek" }), {
+    key: "ArrowRight",
+  });
+  expect(screen.getByRole("tab", { name: "Megjegyzés" })).toHaveFocus();
+  expect(screen.getByRole("textbox", { name: "Megjegyzés" })).toHaveValue(
+    "Másik leírás",
   );
+  fireEvent.click(screen.getByRole("tab", { name: "Feltételek" }));
   expect(
-    screen.getByRole("tab", { name: "Megjegyzés", exact: true }),
-  ).toHaveFocus();
-  expect(
-    screen.getByRole("textbox", { name: "Megjegyzés", exact: true }),
-  ).toHaveValue("Másik leírás");
-  fireEvent.click(screen.getByRole("tab", { name: "Feltételek", exact: true }));
-  expect(
-    screen.getByRole("textbox", { name: "Ajánlat feltételei", exact: true }),
+    screen.getByRole("textbox", { name: "Ajánlat feltételei" }),
   ).toHaveValue("Módosított feltételek");
 });

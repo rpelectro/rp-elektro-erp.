@@ -3,6 +3,7 @@ import { type Context } from "./ui";
 import { attach } from "./documents";
 import { friendly } from "./domain";
 import { PhotoPreview } from "./PhotoPreview";
+import { FileDropInput } from "./FileDropInput";
 
 export function RoomPhotos({
   ctx,
@@ -52,53 +53,52 @@ export function RoomPhotos({
           </div>
         );
       })}
-      <label className="upload-box">
-        {name || "Névtelen helyiség"} – képek feltöltése
-        <input
-          type="file"
-          multiple
-          accept="image/png,image/jpeg,image/webp"
-          disabled={busy || locked}
-          onChange={(event) => {
-            const input = event.currentTarget;
-            const files = Array.from(input.files ?? []);
-            if (!files.length) return;
-            setBusy(true);
-            onBusy(true);
-            setError("");
-            void (async () => {
-              let saved = 0;
+      <FileDropInput
+        label={`${name || "Névtelen helyiség"} – képek feltöltése`}
+        accept="image/png,image/jpeg,image/webp"
+        disabled={busy || locked}
+        onFiles={async (files) => {
+          setBusy(true);
+          onBusy(true);
+          setError("");
+          let saved = 0;
+          const errors: string[] = [];
+          try {
+            for (const file of files) {
               try {
-                for (const file of files) {
-                  if (!file.type.startsWith("image/"))
-                    throw new Error("Csak JPEG, PNG vagy WebP képet válassz.");
-                  const entry = await attach(
-                    ctx.repo,
-                    ctx.projectId ?? null,
-                    file,
-                    "photo",
-                    entityId ?? null,
-                  );
-                  onAdd(entry.id);
-                  saved++;
-                }
-              } catch (e) {
-                setError(
-                  `${saved} kép feltöltve. ${friendly(e)} A már feltöltött képek megmaradtak.`,
+                if (!file.type.startsWith("image/"))
+                  throw new Error("Csak JPEG, PNG vagy WebP képet válassz.");
+                const entry = await attach(
+                  ctx.repo,
+                  ctx.projectId ?? null,
+                  file,
+                  "photo",
+                  entityId ?? null,
                 );
-              } finally {
-                try {
-                  await ctx.reload();
-                } finally {
-                  input.value = "";
-                  setBusy(false);
-                  onBusy(false);
-                }
+                onAdd(entry.id);
+                saved++;
+              } catch (e) {
+                errors.push(`${file.name}: ${friendly(e)}`);
               }
-            })();
-          }}
-        />
-      </label>
+            }
+            if (errors.length)
+              setError(
+                `${saved}/${files.length} kép feltöltve. ${errors.join(" · ")} A sikeres képek megmaradtak.`,
+              );
+          } catch (e) {
+            setError(
+              `${saved} kép feltöltve. ${friendly(e)} A már feltöltött képek megmaradtak.`,
+            );
+          } finally {
+            try {
+              await ctx.reload();
+            } finally {
+              setBusy(false);
+              onBusy(false);
+            }
+          }
+        }}
+      />
       <p className="small muted">
         Több kép is kiválasztható. JPEG, PNG, WebP · képenként legfeljebb 10 MB.
         A helyiséghez rendelést a felmérés mentése rögzíti. Leválasztáskor az

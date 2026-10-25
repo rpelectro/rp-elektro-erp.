@@ -389,3 +389,19 @@ pre {
   flex-wrap: wrap;
   margin-bottom: 16px;
 }
+.file-drop {
+  transition:
+    background 120ms,
+    border-color 120ms;
+}
+.file-drop.is-dragging {
+  border: 2px dashed #b38212;
+  background: #fff7d6;
+}
+.file-drop.is-disabled {
+  opacity: 0.65;
+}
+.drop-prompt {
+  font-weight: 600;
+  margin: 0 0 12px;
+}

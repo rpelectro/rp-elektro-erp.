@@ -114,13 +114,45 @@ test("helyiségfotók, hosszú szöveg szerkesztése és projekt PDF-ek", async 
       name: `Helyiség: ${name}`,
       exact: true,
     });
-    await room.getByLabel(`${name} – képek feltöltése`).setInputFiles(
-      files.map((name) => ({
-        name,
-        mimeType: "image/png",
-        buffer: Buffer.concat([png, Buffer.from(name)]),
-      })),
-    );
+    if (name === "Nappali") {
+      const dataTransfer = await page.evaluateHandle(
+        ({ names, bytes }) => {
+          const transfer = new DataTransfer();
+          transfer.items.add(
+            new File(["Hibás fájl"], "nem-kep.txt", { type: "text/plain" }),
+          );
+          for (const fileName of names)
+            transfer.items.add(
+              new File(
+                [
+                  new Uint8Array([
+                    ...bytes,
+                    ...new TextEncoder().encode(fileName),
+                  ]),
+                ],
+                fileName,
+                { type: "image/png" },
+              ),
+            );
+          return transfer;
+        },
+        { names: [...files], bytes: Array.from(png) },
+      );
+      await room
+        .locator(".file-drop")
+        .dispatchEvent("dragenter", { dataTransfer });
+      await expect(room.locator(".file-drop")).toHaveClass(/is-dragging/);
+      await room.locator(".file-drop").dispatchEvent("drop", { dataTransfer });
+      await dataTransfer.dispose();
+      await expect(room.getByRole("alert")).toContainText("2/3 kép feltöltve");
+    } else
+      await room.getByLabel(`${name} – képek feltöltése`).setInputFiles(
+        files.map((name) => ({
+          name,
+          mimeType: "image/png",
+          buffer: Buffer.concat([png, Buffer.from(name)]),
+        })),
+      );
     await expect(room.getByRole("img")).toHaveCount(files.length);
     for (const file of files)
       await expect(

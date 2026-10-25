@@ -14,6 +14,7 @@ import {
 } from "./domain";
 import { today, parseQuantity, type Payload, type Entry } from "./business";
 import { LongText } from "./LongText";
+import { FileDropInput } from "./FileDropInput";
 export interface Context {
   repo: Repository;
   data: Snapshot;
@@ -363,38 +364,51 @@ export function Upload({
 }) {
   const action = useAction();
   return (
-    <div className="upload-box">
+    <div>
       {action.feedback}
-      <label>
-        {category === "photo" ? "Fénykép csatolása" : "Eredeti fájl csatolása"}
-        <input
-          type="file"
-          accept={
-            category === "photo" || category === "logo"
-              ? "image/png,image/jpeg,image/webp"
-              : "application/pdf,image/png,image/jpeg,image/webp"
-          }
-          disabled={action.busy}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            void action.act(async () => {
-              const { attach } = await import("./documents");
-              const entry = await attach(
-                ctx.repo,
-                ctx.projectId ?? null,
-                file,
-                category,
-                entityId ?? null,
-              );
+      <FileDropInput
+        label={
+          category === "photo" ? "Fénykép csatolása" : "Eredeti fájl csatolása"
+        }
+        multiple={category !== "logo"}
+        accept={
+          category === "photo" || category === "logo"
+            ? "image/png,image/jpeg,image/webp"
+            : "application/pdf,image/png,image/jpeg,image/webp"
+        }
+        disabled={action.busy}
+        onFiles={async (files) => {
+          await action.act(async () => {
+            let saved = 0;
+            const errors: string[] = [];
+            try {
+              for (const file of files) {
+                try {
+                  const { attach } = await import("./documents");
+                  const entry = await attach(
+                    ctx.repo,
+                    ctx.projectId ?? null,
+                    file,
+                    category,
+                    entityId ?? null,
+                  );
+                  saved++;
+                  onDone?.(entry);
+                } catch (e) {
+                  errors.push(`${file.name}: ${friendly(e)}`);
+                }
+              }
+            } finally {
               await ctx.reload();
-              onDone?.(entry);
-              action.setMessage("Az eredeti fájl és kapcsolata elmentve.");
-              e.target.value = "";
-            });
-          }}
-        />
-      </label>
+            }
+            if (errors.length)
+              throw new Error(
+                `${saved}/${files.length} fájl feltöltve. ${errors.join(" · ")} A sikeres fájlok megmaradtak.`,
+              );
+            action.setMessage(`${saved} eredeti fájl és kapcsolata elmentve.`);
+          });
+        }}
+      />
       <small className="muted">
         PDF, JPEG, PNG vagy WebP · legfeljebb 10 MB · a felvétel nem jelent
         kiküldést.

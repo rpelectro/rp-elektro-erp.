@@ -100,6 +100,10 @@ A felmérés **Helyiségek** részében alaphelyiségek választhatók (példáu
 konyha, hálószoba, fürdőszoba), és egyedi helyiség is felvehető. Minden helyiségnek
 saját fotófeltöltője van: több kép is kiválasztható, és a képek előnézete az adott
 helyiségnél jelenik meg. A helyiséghez rendelést a felmérés **Mentés** gombja rögzíti.
+A helyiség feltöltőkeretére több kép egyszerre ráhúzható a fájlkezelőből.
+A Dokumentumok és az általános csatolmányfeltöltők is támogatják a csoportos
+behúzást. Egy hibás fájl nem állítja meg a többi feltöltését; a hibákat név szerint
+jelzi a felület. A céges logónál továbbra is egy fájl adható meg egyszerre.
 A képek leválaszthatók; az eredeti fájlok a Dokumentumok között megmaradnak.
 A régi, közös felmérésfotók továbbra is elérhetők az általános képek között.
 Ehhez a változáshoz nem szükséges új Supabase SQL-migráció.

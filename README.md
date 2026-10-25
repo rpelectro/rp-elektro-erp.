@@ -92,7 +92,9 @@ Más űrlapok hosszú szövegeinél továbbra is használható a Nagyobb szerkes
 
 Az **árajánlat, anyaglista, átadási jegyzőkönyv és számlanyilvántartás** szerkesztői
 szintén teljes oldalas munkaterületet használnak, bal oldali részekkel és felső
-mentési művelettel. Az ajánlatban külön érhetők el a felek, tételek, árazás,
+mentési művelettel. A fő projektfülek (Felmérés, Árajánlat, Anyagok stb.) felül
+maradnak; az oldalsó navigáció a megnyitott dokumentum belső részeit tartalmazza.
+Az ajánlatban külön érhetők el a felek, tételek, árazás,
 feltételek és PDF-véglegesítés. Az átadás hosszú leírásai fülek között válthatók;
 a tartalomáttekintés és az aláírás külön lépés marad. A számla befizetései és
 eredeti csatolmányai külön részek. Az anyaglista a **Szerkesztés** gombbal nyitható

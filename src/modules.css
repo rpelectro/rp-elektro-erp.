@@ -620,20 +620,19 @@ textarea.survey-editor-text {
 }
 .project-home-grid {
   display: grid;
-  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
 }
 .project-home-grid > .project-tabs {
   display: flex;
-  flex-direction: column;
-  align-self: start;
+  flex-direction: row;
+  flex-wrap: wrap;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
   padding: 8px;
   gap: 4px;
-  position: sticky;
-  top: 10px;
+  position: static;
 }
 .project-home-grid > .project-tabs button {
   text-align: left;
@@ -643,7 +642,7 @@ textarea.survey-editor-text {
 }
 .project-home-grid > .project-tabs button.active {
   background: #fff1be;
-  box-shadow: inset 3px 0 #e9b62e;
+  box-shadow: inset 0 -3px #e9b62e;
 }
 .project-home-main {
   min-width: 0;

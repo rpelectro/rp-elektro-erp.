@@ -84,7 +84,7 @@ export function SurveyTextEditor({
             key={item.key}
             type="button"
             role="tab"
-            id={`${id}-${item.key}`}
+            id={`${id}-tab-${item.key}`}
             aria-controls={`${id}-panel`}
             aria-selected={field.key === item.key}
             tabIndex={field.key === item.key ? 0 : -1}
@@ -106,7 +106,7 @@ export function SurveyTextEditor({
                       fields.length;
               setActive(fields[next].key);
               setMatch(-1);
-              document.getElementById(`${id}-${fields[next].key}`)?.focus();
+              document.getElementById(`${id}-tab-${fields[next].key}`)?.focus();
             }}
             onClick={() => {
               setActive(item.key);
@@ -120,7 +120,7 @@ export function SurveyTextEditor({
       <div
         role="tabpanel"
         id={`${id}-panel`}
-        aria-labelledby={`${id}-${field.key}`}
+        aria-labelledby={`${id}-tab-${field.key}`}
       >
         <div className="survey-search">
           <label>

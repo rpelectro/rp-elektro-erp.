@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useContext,
   type ReactNode,
   type FormEvent,
 } from "react";
@@ -15,6 +16,8 @@ import {
 import { today, parseQuantity, type Payload, type Entry } from "./business";
 import { LongText } from "./LongText";
 import { FileDropInput } from "./FileDropInput";
+import { RecordWorkspaceContext } from "./RecordWorkspaceContext";
+import { SurveyTextEditor } from "./SurveyTextEditor";
 export interface Context {
   repo: Repository;
   data: Snapshot;
@@ -97,6 +100,14 @@ export function Text({
   disabled?: boolean;
   type?: string;
 }) {
+  const workspace = useContext(RecordWorkspaceContext);
+  if (rows && workspace)
+    return (
+      <SurveyTextEditor
+        fields={[{ key: "text", label, tab: label, value }]}
+        onChange={(_, value) => onChange(value)}
+      />
+    );
   if (rows)
     return (
       <LongText
@@ -224,10 +235,21 @@ export function Form({
   busy: boolean;
   label?: string;
 }) {
+  const workspace = useContext(RecordWorkspaceContext);
   return (
     <form
+      noValidate={!!workspace}
       onSubmit={(e) => {
         e.preventDefault();
+        if (workspace) {
+          const invalid = e.currentTarget.querySelector<HTMLElement>(
+            "input:invalid, textarea:invalid, select:invalid",
+          );
+          if (invalid) {
+            workspace.reveal(invalid);
+            return;
+          }
+        }
         onSave();
       }}
     >

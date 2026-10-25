@@ -606,3 +606,59 @@ textarea.survey-editor-text {
     flex: 1 1 40%;
   }
 }
+.content:has(> .record-workspace) > :not(.record-workspace) {
+  display: none !important;
+}
+.record-workspace[data-header-save] .form-actions {
+  display: none;
+}
+.record-workspace .notice {
+  margin: 12px 0;
+}
+.record-workspace .survey-editor-text {
+  height: clamp(300px, 50dvh, 600px);
+}
+.project-home-grid {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 20px;
+}
+.project-home-grid > .project-tabs {
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px;
+  gap: 4px;
+  position: sticky;
+  top: 10px;
+}
+.project-home-grid > .project-tabs button {
+  text-align: left;
+  border: 0;
+  border-radius: 4px;
+  padding: 12px;
+}
+.project-home-grid > .project-tabs button.active {
+  background: #fff1be;
+  box-shadow: inset 3px 0 #e9b62e;
+}
+.project-home-main {
+  min-width: 0;
+}
+@media (max-width: 850px) {
+  .project-home-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .project-home-grid > .project-tabs {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .record-workspace .survey-workspace-header .row > button {
+    max-width: 100%;
+    white-space: normal;
+  }
+}

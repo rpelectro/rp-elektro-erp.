@@ -1,3 +1,4 @@
+import { RecordWorkspace, WorkspaceSection } from "./RecordWorkspace";
 import { useState } from "react";
 import {
   type Context,
@@ -6,7 +7,6 @@ import {
   Select,
   Check,
   Form,
-  Modal,
   useAction,
   saveEntry,
   Upload,
@@ -347,59 +347,91 @@ function InvoiceEditor({
   };
   const readonly = !!record && !p.draft;
   return (
-    <Modal
+    <RecordWorkspace
       title="Kiállított számla nyilvántartása"
       onClose={onClose}
       dirty={dirty}
+      busy={action.busy}
+      saveLabel={
+        readonly
+          ? undefined
+          : p.draft
+            ? "Tervezet mentése"
+            : "Kiállított számla végleges rögzítése"
+      }
+      sections={
+        readonly
+          ? [
+              { id: "overview", label: "Rögzített számla" },
+              { id: "payments", label: "Befizetések" },
+              { id: "documents", label: "Eredeti fájlok" },
+            ]
+          : [
+              { id: "basic", label: "Alapadatok és típus" },
+              { id: "parties", label: "Kibocsátó és vevő" },
+              { id: "money", label: "Dátumok és összegek" },
+              { id: "relations", label: "Kapcsolt bizonylatok" },
+              { id: "notes", label: "Megjegyzés" },
+              ...(record ? [{ id: "documents", label: "Eredeti fájlok" }] : []),
+            ]
+      }
     >
       {action.feedback}
       {readonly ? (
         <>
-          <div className="notice">
-            A kiállított számla adatai változatlan pillanatfelvételként
-            megmaradnak. Sztornóhoz vagy helyesbítéshez külön, kapcsolt
-            dokumentumot rögzíts.
-          </div>
-          <h3>
-            {p.number} · {types[p.document_type]}
-          </h3>
-          <p>
-            {p.issuer.name} → {p.customer.name}
-            <br />
-            {p.issued_on} · határidő: {p.due_on}
-            <br />
-            <strong>{currencyMoney(p.gross_minor ?? 0, p.currency)}</strong>
-          </p>
-          {p.advance_deduction_minor > 0 && (
+          <WorkspaceSection id="overview">
+            <div className="notice">
+              A kiállított számla adatai változatlan pillanatfelvételként
+              megmaradnak. Sztornóhoz vagy helyesbítéshez külön, kapcsolt
+              dokumentumot rögzíts.
+            </div>
+            <h3>
+              {p.number} · {types[p.document_type]}
+            </h3>
             <p>
-              Beszámított előleg:{" "}
-              {currencyMoney(p.advance_deduction_minor, p.currency)}
+              {p.issuer.name} → {p.customer.name}
+              <br />
+              {p.issued_on} · határidő: {p.due_on}
+              <br />
+              <strong>{currencyMoney(p.gross_minor ?? 0, p.currency)}</strong>
             </p>
-          )}
-          <Payments ctx={{ ...ctx, projectId }} invoice={record} />
-          <Upload
-            ctx={{ ...ctx, projectId }}
-            category="invoice"
-            entityId={record.id}
-          />
-          <DocumentList ctx={{ ...ctx, projectId }} entityId={record.id} />
-          <button
-            className="secondary"
-            onClick={() => {
-              set({
-                ...newInvoice(ctx),
-                issuer: p.issuer,
-                customer: p.customer,
-                currency: p.currency,
-                document_type: "credit",
-                relation_ids: [record.id],
-              });
-              setRecord(undefined);
-              mark(true);
-            }}
-          >
-            Kapcsolt sztornó / helyesbítés rögzítése
-          </button>
+            {p.advance_deduction_minor > 0 && (
+              <p>
+                Beszámított előleg:{" "}
+                {currencyMoney(p.advance_deduction_minor, p.currency)}
+              </p>
+            )}
+          </WorkspaceSection>
+          <WorkspaceSection id="payments" title="Befizetések">
+            <Payments ctx={{ ...ctx, projectId }} invoice={record} />
+          </WorkspaceSection>
+          <WorkspaceSection id="documents" title="Eredeti fájlok">
+            <Upload
+              ctx={{ ...ctx, projectId }}
+              category="invoice"
+              entityId={record.id}
+            />
+            <DocumentList ctx={{ ...ctx, projectId }} entityId={record.id} />
+          </WorkspaceSection>
+          <WorkspaceSection id="overview">
+            <button
+              className="secondary"
+              onClick={() => {
+                set({
+                  ...newInvoice(ctx),
+                  issuer: p.issuer,
+                  customer: p.customer,
+                  currency: p.currency,
+                  document_type: "credit",
+                  relation_ids: [record.id],
+                });
+                setRecord(undefined);
+                mark(true);
+              }}
+            >
+              Kapcsolt sztornó / helyesbítés rögzítése
+            </button>
+          </WorkspaceSection>
         </>
       ) : (
         <Form
@@ -428,193 +460,207 @@ function InvoiceEditor({
             })
           }
         >
-          <Check
-            label="Hiányos tervezet – kimarad a pénzügyi összesítésből"
-            value={p.draft}
-            onChange={(draft) => patch({ draft })}
-          />
-          <Check
-            label="Tesztbizonylat – kimarad az éles összesítésből"
-            value={p.is_test}
-            onChange={(is_test) => patch({ is_test })}
-          />
-          <Select
-            label="Projekt"
-            value={projectId ?? ""}
-            onChange={(v) => {
-              setProject(v || null);
-              mark(true);
-            }}
-            options={[
-              ["", "Nincs projekt"],
-              ...ctx.data.projects.map(
-                (p) => [p.id, p.title] as [string, string],
-              ),
-            ]}
-          />
-          <Select
-            label="Vevő átvétele az ügyféltörzsből"
-            value=""
-            onChange={(v) => {
-              const partner = ctx.data.partners.find((p) => p.id === v);
-              if (partner)
-                patch({
-                  customer: {
-                    name: partner.name,
-                    address: partner.billing_address,
-                    tax_number: "",
-                    email: partner.email,
-                    phone: partner.phone,
-                  },
-                });
-            }}
-            options={[
-              ["", "Ügyfél kiválasztása…"],
-              ...ctx.data.partners.map(
-                (p) => [p.id, p.name] as [string, string],
-              ),
-            ]}
-          />
-          <Select
-            label="Dokumentumtípus"
-            value={p.document_type}
-            onChange={(document_type) =>
-              patch({ document_type: document_type as typeof p.document_type })
-            }
-            options={Object.entries(types)}
-          />
-          <Text
-            label="Tényleges számlaszám"
-            value={p.number}
-            required={!p.draft}
-            onChange={(number) => patch({ number })}
-          />
-          <PartyEditor
-            p={p.issuer}
-            label="Kibocsátó"
-            onChange={(issuer) => patch({ issuer })}
-          />
-          <PartyEditor
-            p={p.customer}
-            label="Vevő"
-            onChange={(customer) => patch({ customer })}
-          />
-          <div className="three-columns">
-            <Text
-              label="Kiállítás dátuma"
-              type="date"
-              value={p.issued_on ?? ""}
-              required={!p.draft}
-              onChange={(issued_on) => patch({ issued_on: issued_on || null })}
+          <WorkspaceSection id="basic" title="Alapadatok és típus">
+            <Check
+              label="Hiányos tervezet – kimarad a pénzügyi összesítésből"
+              value={p.draft}
+              onChange={(draft) => patch({ draft })}
             />
-            <Text
-              label="Teljesítés dátuma"
-              type="date"
-              value={p.performed_on ?? ""}
-              required={!p.draft}
-              onChange={(performed_on) =>
-                patch({ performed_on: performed_on || null })
-              }
+            <Check
+              label="Tesztbizonylat – kimarad az éles összesítésből"
+              value={p.is_test}
+              onChange={(is_test) => patch({ is_test })}
             />
-            <Text
-              label="Fizetési határidő"
-              type="date"
-              value={p.due_on ?? ""}
-              required={!p.draft}
-              onChange={(due_on) => patch({ due_on: due_on || null })}
+            <Select
+              label="Projekt"
+              value={projectId ?? ""}
+              onChange={(v) => {
+                setProject(v || null);
+                mark(true);
+              }}
+              options={[
+                ["", "Nincs projekt"],
+                ...ctx.data.projects.map(
+                  (p) => [p.id, p.title] as [string, string],
+                ),
+              ]}
             />
-          </div>
-          <div className="three-columns">
-            <OptionalMoney
-              label="Nettó"
-              value={p.net_minor}
-              onChange={(net_minor) => patch({ net_minor })}
-            />
-            <OptionalMoney
-              label="Adó"
-              value={p.tax_minor}
-              onChange={(tax_minor) => patch({ tax_minor })}
-            />
-            <OptionalMoney
-              label="Bruttó – előleglevonás előtt"
-              value={p.gross_minor}
-              onChange={(gross_minor) => patch({ gross_minor })}
-            />
-          </div>
-          <div className="form-grid">
-            <Text
-              label="Deviza (pl. HUF, EUR)"
-              value={p.currency}
-              required
-              onChange={(currency) =>
-                patch({ currency: currency.toUpperCase() })
-              }
-            />
-            <Text
-              label="Fizetési mód"
-              value={p.method}
-              required={!p.draft}
-              onChange={(method) => patch({ method })}
-            />
-          </div>
-          <h3>Kapcsolt előzmények</h3>
-          {ctx.data.entries
-            .filter(
-              (e) =>
-                e.payload.type === "invoice" &&
-                !e.payload.draft &&
-                e.id !== record?.id &&
-                e.project_id === projectId &&
-                e.payload.currency === p.currency,
-            )
-            .map((e) => (
-              <Check
-                key={e.id}
-                label={`${(e.payload as PayloadOf<"invoice">).number} · ${types[(e.payload as PayloadOf<"invoice">).document_type]}`}
-                value={p.relation_ids.includes(e.id)}
-                onChange={(checked) =>
+            <Select
+              label="Vevő átvétele az ügyféltörzsből"
+              value=""
+              onChange={(v) => {
+                const partner = ctx.data.partners.find((p) => p.id === v);
+                if (partner)
                   patch({
-                    relation_ids: checked
-                      ? [...p.relation_ids, e.id]
-                      : p.relation_ids.filter((id) => id !== e.id),
-                  })
+                    customer: {
+                      name: partner.name,
+                      address: partner.billing_address,
+                      tax_number: "",
+                      email: partner.email,
+                      phone: partner.phone,
+                    },
+                  });
+              }}
+              options={[
+                ["", "Ügyfél kiválasztása…"],
+                ...ctx.data.partners.map(
+                  (p) => [p.id, p.name] as [string, string],
+                ),
+              ]}
+            />
+            <Select
+              label="Dokumentumtípus"
+              value={p.document_type}
+              onChange={(document_type) =>
+                patch({
+                  document_type: document_type as typeof p.document_type,
+                })
+              }
+              options={Object.entries(types)}
+            />
+            <Text
+              label="Tényleges számlaszám"
+              value={p.number}
+              required={!p.draft}
+              onChange={(number) => patch({ number })}
+            />
+          </WorkspaceSection>
+          <WorkspaceSection id="parties" title="Kibocsátó és vevő">
+            <PartyEditor
+              p={p.issuer}
+              label="Kibocsátó"
+              onChange={(issuer) => patch({ issuer })}
+            />
+            <PartyEditor
+              p={p.customer}
+              label="Vevő"
+              onChange={(customer) => patch({ customer })}
+            />
+          </WorkspaceSection>
+          <WorkspaceSection id="money" title="Dátumok és összegek">
+            <div className="three-columns">
+              <Text
+                label="Kiállítás dátuma"
+                type="date"
+                value={p.issued_on ?? ""}
+                required={!p.draft}
+                onChange={(issued_on) =>
+                  patch({ issued_on: issued_on || null })
                 }
               />
-            ))}
-          {p.document_type === "final" && (
-            <>
-              <Amount
-                label="Beszámított előleg (a bruttóból levonva)"
-                value={p.advance_deduction_minor}
-                onChange={(advance_deduction_minor) =>
-                  patch({ advance_deduction_minor })
+              <Text
+                label="Teljesítés dátuma"
+                type="date"
+                value={p.performed_on ?? ""}
+                required={!p.draft}
+                onChange={(performed_on) =>
+                  patch({ performed_on: performed_on || null })
                 }
               />
-              <p className="small muted">
-                A bruttó mezőbe a teljes munka értékét írd; az előlegbeszámítás
-                külön csökkenti a végszámla nyitott összegét.
-              </p>
-            </>
-          )}
-          <Text
-            label="Megjegyzés"
-            rows={3}
-            value={p.notes}
-            onChange={(notes) => patch({ notes })}
-          />
+              <Text
+                label="Fizetési határidő"
+                type="date"
+                value={p.due_on ?? ""}
+                required={!p.draft}
+                onChange={(due_on) => patch({ due_on: due_on || null })}
+              />
+            </div>
+            <div className="three-columns">
+              <OptionalMoney
+                label="Nettó"
+                value={p.net_minor}
+                onChange={(net_minor) => patch({ net_minor })}
+              />
+              <OptionalMoney
+                label="Adó"
+                value={p.tax_minor}
+                onChange={(tax_minor) => patch({ tax_minor })}
+              />
+              <OptionalMoney
+                label="Bruttó – előleglevonás előtt"
+                value={p.gross_minor}
+                onChange={(gross_minor) => patch({ gross_minor })}
+              />
+            </div>
+            <div className="form-grid">
+              <Text
+                label="Deviza (pl. HUF, EUR)"
+                value={p.currency}
+                required
+                onChange={(currency) =>
+                  patch({ currency: currency.toUpperCase() })
+                }
+              />
+              <Text
+                label="Fizetési mód"
+                value={p.method}
+                required={!p.draft}
+                onChange={(method) => patch({ method })}
+              />
+            </div>
+          </WorkspaceSection>
+          <WorkspaceSection id="relations">
+            <h3>Kapcsolt előzmények</h3>
+            {ctx.data.entries
+              .filter(
+                (e) =>
+                  e.payload.type === "invoice" &&
+                  !e.payload.draft &&
+                  e.id !== record?.id &&
+                  e.project_id === projectId &&
+                  e.payload.currency === p.currency,
+              )
+              .map((e) => (
+                <Check
+                  key={e.id}
+                  label={`${(e.payload as PayloadOf<"invoice">).number} · ${types[(e.payload as PayloadOf<"invoice">).document_type]}`}
+                  value={p.relation_ids.includes(e.id)}
+                  onChange={(checked) =>
+                    patch({
+                      relation_ids: checked
+                        ? [...p.relation_ids, e.id]
+                        : p.relation_ids.filter((id) => id !== e.id),
+                    })
+                  }
+                />
+              ))}
+            {p.document_type === "final" && (
+              <>
+                <Amount
+                  label="Beszámított előleg (a bruttóból levonva)"
+                  value={p.advance_deduction_minor}
+                  onChange={(advance_deduction_minor) =>
+                    patch({ advance_deduction_minor })
+                  }
+                />
+                <p className="small muted">
+                  A bruttó mezőbe a teljes munka értékét írd; az
+                  előlegbeszámítás külön csökkenti a végszámla nyitott összegét.
+                </p>
+              </>
+            )}
+          </WorkspaceSection>
+          <WorkspaceSection id="notes" title="Megjegyzés">
+            <Text
+              label="Megjegyzés"
+              rows={3}
+              value={p.notes}
+              onChange={(notes) => patch({ notes })}
+            />
+          </WorkspaceSection>
         </Form>
       )}
       {record && p.draft && (
-        <>
+        <WorkspaceSection id="documents" title="Eredeti fájlok">
           <Upload
             ctx={{ ...ctx, projectId }}
             category="invoice"
             entityId={record.id}
           />
           <DocumentList ctx={{ ...ctx, projectId }} entityId={record.id} />
-        </>
+        </WorkspaceSection>
       )}
-    </Modal>
+    </RecordWorkspace>
   );
 }
 function Payments({ ctx, invoice }: { ctx: Context; invoice: Entry }) {

@@ -3,9 +3,16 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
   page,
 }, info) => {
   test.setTimeout(120000);
+  page.setDefaultTimeout(15000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  const dialog = () => page.getByRole("dialog");
+  const dialog = () => page.locator("dialog[open], .record-workspace");
+  const section = async (name: string) =>
+    page
+      .locator(".record-workspace")
+      .getByRole("navigation", { name: "Dokumentum részei" })
+      .getByRole("button", { name, exact: true })
+      .click();
   await page.goto("/");
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
@@ -128,11 +135,44 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
   await expect(survey).not.toBeVisible();
   await page.getByRole("button", { name: "Árajánlat", exact: true }).click();
   await page.getByRole("button", { name: "Új ajánlat", exact: true }).click();
+  await section("Munkatételek");
   await dialog()
     .getByRole("combobox", { name: "Felmérés kiválasztása" })
     .selectOption({ label: "Helyszíni felmérés" });
+  await section("Alapadatok");
   await dialog().getByLabel("Érvényesség", { exact: true }).fill("2026-12-31");
+  await section("Vállalási feltételek");
+  const terms = Array.from(
+    { length: 40 },
+    (_, index) =>
+      `${index + 1}. A vállalás részletes feltétele, áttekinthető görgethető szöveggel.`,
+  ).join("\n");
+  await dialog()
+    .getByRole("textbox", {
+      name: "Fizetési és vállalási feltételek",
+      exact: true,
+    })
+    .fill(terms);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await section("Munkatételek");
+  await section("Vállalási feltételek");
+  await expect(
+    dialog().getByRole("textbox", {
+      name: "Fizetési és vállalási feltételek",
+      exact: true,
+    }),
+  ).toHaveValue(terms);
+  await dialog().getByRole("button", { name: "Mentés", exact: true }).click();
+  await expect(
+    dialog().getByText("Ajánlattervezet elmentve.", { exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: info.outputPath("quote-workspace.png"),
+    fullPage: true,
+  });
+  await section("Árazás és adózás");
   await dialog().getByLabel("Kézi anyagköltség (Ft)").fill("3000");
+  await section("Összesítés és PDF");
   await dialog()
     .getByRole("button", { name: "Végleges PDF-pillanatfelvétel készítése" })
     .click();
@@ -141,14 +181,23 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
       "A végleges ajánlat és eredeti PDF elmentve. Kiküldés nem történt.",
     ),
   ).toBeVisible();
+  await section("PDF és dokumentumok");
   const quoteDownload = page.waitForEvent("download", { timeout: 15000 });
   await dialog().getByRole("button", { name: "Letöltés", exact: true }).click();
   await (await quoteDownload).saveAs(info.outputPath("ajanlat.pdf"));
+  await section("Küldés / ügyféldöntés");
   await dialog()
     .getByRole("combobox", { name: "Állapot", exact: true })
     .selectOption("accepted");
   await dialog().getByRole("button", { name: "Esemény rögzítése" }).click();
-  await dialog().getByRole("button", { name: "Bezárás", exact: true }).click();
+  await expect(
+    dialog().getByText("Az esemény rögzítve. Nem történt e-mail-küldés.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await dialog()
+    .getByRole("button", { name: "← Vissza a listához", exact: true })
+    .click();
   await page.getByRole("button", { name: "Anyagok", exact: true }).click();
   await page
     .getByRole("combobox", { name: "Anyaglista ajánlatverziója" })
@@ -156,11 +205,37 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
   await page.getByRole("button", { name: "Eltérések előnézete" }).click();
   await page.getByRole("button", { name: "Frissítés jóváhagyása" }).click();
   await expect(page.getByText("Számított: 4 m", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Anyaglista szerkesztése", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await dialog()
+    .getByLabel("Ténylegesen szükséges mennyiség", { exact: true })
+    .fill("5");
+  await section("Anyagok megjegyzései");
+  await dialog()
+    .getByRole("textbox", { name: "Anyag megjegyzése", exact: true })
+    .fill("Külön ellenőrzött anyagigény.");
+  await dialog().getByRole("button", { name: "Mentés", exact: true }).click();
+  await expect(
+    dialog().getByText("Anyaglista mentve.", { exact: true }),
+  ).toBeVisible();
+  await dialog().getByRole("button", { name: "Mentés", exact: true }).click();
+  await expect(
+    dialog().getByText("Anyaglista mentve.", { exact: true }),
+  ).toBeVisible();
+  await dialog()
+    .getByRole("button", { name: "← Vissza a listához", exact: true })
+    .click();
+  await expect(page.getByText("Szükséges: 5 m", { exact: true })).toBeVisible();
+
   await page.getByRole("button", { name: "Jegyzőkönyv", exact: true }).click();
   await page.getByRole("button", { name: "Új jegyzőkönyv" }).click();
+  await section("Elvégzett munka / leírások");
   await dialog()
-    .getByLabel("Ténylegesen elvégzett munka")
+    .getByRole("textbox", { name: "Ténylegesen elvégzett munka", exact: true })
     .fill("Két dugalj cseréje és ellenőrzése.");
+  await section("Lezárási ellenőrzések");
   await expect(
     dialog().getByRole("button", { name: "Tartalom áttekintése és aláírás" }),
   ).toBeDisabled();
@@ -170,8 +245,10 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
   await dialog()
     .getByRole("button", { name: "Tartalom áttekintése és aláírás" })
     .click();
+  await section("Aláírások és PDF");
   for (const label of ["Ügyfél aláírása", "Vállalkozó aláírása"]) {
     const canvas = dialog().locator(`canvas[aria-label="${label}"]`);
+    await canvas.scrollIntoViewIfNeeded();
     const box = await canvas.boundingBox();
     if (!box) throw new Error("Nincs aláírásmező");
     await page.mouse.move(box.x + 20, box.y + 25);
@@ -186,10 +263,13 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
   await expect(
     dialog().getByText("A jegyzőkönyv és eredeti PDF véglegesen elmentve."),
   ).toBeVisible();
+  await section("PDF és dokumentumok");
   const handoverDownload = page.waitForEvent("download", { timeout: 15000 });
   await dialog().getByRole("button", { name: "Letöltés", exact: true }).click();
   await (await handoverDownload).saveAs(info.outputPath("jegyzokonyv.pdf"));
-  await dialog().getByRole("button", { name: "Bezárás", exact: true }).click();
+  await dialog()
+    .getByRole("button", { name: "← Vissza a listához", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Számlák", exact: true })
     .last()
@@ -201,6 +281,7 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
     .getByLabel("Hiányos tervezet – kimarad a pénzügyi összesítésből")
     .uncheck();
   await dialog().getByLabel("Tényleges számlaszám").fill("TESZT-2026-001");
+  await section("Dátumok és összegek");
   for (const label of [
     "Kiállítás dátuma",
     "Teljesítés dátuma",
@@ -219,11 +300,14 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
       "A külső számla adatai rögzítve. Számlakiállítás nem történt.",
     ),
   ).toBeVisible();
+  await section("Befizetések");
   await dialog().getByLabel("Összeg (HUF)", { exact: true }).fill("4000");
   await dialog().getByLabel("Befizetés módja").fill("Átutalás");
   await dialog().getByRole("button", { name: "Befizetés rögzítése" }).click();
   await expect(dialog().getByText(/nyitott:/)).toContainText("6");
-  await dialog().getByRole("button", { name: "Bezárás", exact: true }).click();
+  await dialog()
+    .getByRole("button", { name: "← Vissza a listához", exact: true })
+    .click();
   await page.getByRole("button", { name: "Naptár", exact: true }).click();
   await page.getByRole("button", { name: "Új időpont" }).click();
   await dialog().getByLabel("Időpont neve").fill("Visszatérés");
@@ -288,8 +372,11 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
     }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Megnyitás", exact: true }).click();
+  await section("Befizetések");
   await expect(dialog().getByText(/nyitott:/)).toContainText("6");
-  await dialog().getByRole("button", { name: "Bezárás", exact: true }).click();
+  await dialog()
+    .getByRole("button", { name: "← Vissza a listához", exact: true })
+    .click();
   await page.getByRole("button", { name: "Dokumentumok", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Letöltés", exact: true }),

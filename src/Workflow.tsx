@@ -14,7 +14,6 @@ import {
   Select,
   Check,
   Form,
-  Modal,
   Upload,
   DocumentList,
 } from "./ui";
@@ -35,6 +34,8 @@ import { Invoices } from "./Invoices";
 import { PhotoPreview } from "./PhotoPreview";
 import { SurveyWorkspace } from "./SurveyWorkspace";
 import { ReportButton } from "./ReportButton";
+import { RecordWorkspace, WorkspaceSection } from "./RecordWorkspace";
+import { SurveyTextEditor } from "./SurveyTextEditor";
 const tabs = [
   "Áttekintés",
   "Felmérés",
@@ -67,8 +68,8 @@ export function ProjectModules({
       />
     );
   return (
-    <>
-      <div className="tabs project-tabs">
+    <div className="project-home-grid">
+      <nav className="tabs project-tabs" aria-label="Projekt részei">
         {tabs.map((label, i) => (
           <button
             key={label}
@@ -78,34 +79,36 @@ export function ProjectModules({
             {label}
           </button>
         ))}
+      </nav>
+      <div className="project-home-main">
+        <div className="report-toolbar">
+          <span>{tabs[tab]} – mentett projektadatok exportálása</span>
+          <ReportButton ctx={ctx} tab={tab} />
+        </div>
+        {tab === 0 ? (
+          <>
+            <ProjectOffline ctx={ctx} />
+            {children}
+          </>
+        ) : tab === 1 ? (
+          <Surveys ctx={ctx} onEdit={setSurveyEdit} />
+        ) : tab === 2 ? (
+          <Quotes ctx={ctx} project={project} />
+        ) : tab === 3 ? (
+          <Materials ctx={ctx} />
+        ) : tab === 4 ? (
+          <Handovers ctx={ctx} project={project} />
+        ) : tab === 5 ? (
+          <Invoices ctx={ctx} />
+        ) : (
+          <section className="panel">
+            <h2>Projekt dokumentumai</h2>
+            <Upload ctx={ctx} />
+            <DocumentList ctx={ctx} />
+          </section>
+        )}
       </div>
-      <div className="report-toolbar">
-        <span>{tabs[tab]} – mentett projektadatok exportálása</span>
-        <ReportButton ctx={ctx} tab={tab} />
-      </div>
-      {tab === 0 ? (
-        <>
-          <ProjectOffline ctx={ctx} />
-          {children}
-        </>
-      ) : tab === 1 ? (
-        <Surveys ctx={ctx} onEdit={setSurveyEdit} />
-      ) : tab === 2 ? (
-        <Quotes ctx={ctx} project={project} />
-      ) : tab === 3 ? (
-        <Materials ctx={ctx} />
-      ) : tab === 4 ? (
-        <Handovers ctx={ctx} project={project} />
-      ) : tab === 5 ? (
-        <Invoices ctx={ctx} />
-      ) : (
-        <section className="panel">
-          <h2>Projekt dokumentumai</h2>
-          <Upload ctx={ctx} />
-          <DocumentList ctx={ctx} />
-        </section>
-      )}
-    </>
+    </div>
   );
 }
 function entries<T extends Entry["payload"]["type"]>(ctx: Context, type: T) {
@@ -474,6 +477,7 @@ function QuoteEditor({
   const [dirty, mark] = useState(false);
   const [state, setState] = useState("sent"),
     [decisionNote, setDecisionNote] = useState("");
+  const [decisionDirty, markDecision] = useState(false);
   const action = useAction();
   const patch = (v: Partial<typeof p>) => {
     mark(true);
@@ -495,278 +499,331 @@ function QuoteEditor({
     }
   })();
   return (
-    <Modal
+    <RecordWorkspace
       title={`Árajánlat · ${p.revision}. verzió`}
       onClose={onClose}
-      dirty={dirty}
+      dirty={dirty || decisionDirty}
+      busy={action.busy}
+      saveLabel={p.sealed ? undefined : "Mentés"}
+      sections={
+        p.sealed
+          ? [
+              { id: "overview", label: "Végleges ajánlat" },
+              { id: "documents", label: "PDF és dokumentumok" },
+              { id: "decision", label: "Küldés / ügyféldöntés" },
+            ]
+          : [
+              { id: "basic", label: "Alapadatok" },
+              { id: "parties", label: "Ügyfél és vállalkozás" },
+              { id: "items", label: "Munkatételek" },
+              { id: "money", label: "Árazás és adózás" },
+              { id: "terms", label: "Vállalási feltételek" },
+              { id: "final", label: "Összesítés és PDF" },
+            ]
+      }
     >
       {action.feedback}
       {p.sealed ? (
         <>
-          <div className="notice">
-            A PDF és a hozzá tartozó adatok változatlan pillanatfelvétel. Az
-            elkészítés nem jelenti, hogy elküldted vagy az ügyfél elfogadta.
-          </div>
-          <SummaryQuote p={p} />
-          <DocumentList ctx={ctx} entityId={record?.id} />
-          <button
-            className="secondary"
-            disabled={action.busy}
-            onClick={() => {
-              set({
-                ...p,
-                sealed: false,
-                revision:
-                  Math.max(
-                    ...entries(ctx, "quote")
-                      .filter(
-                        (e) =>
-                          (e.payload as PayloadOf<"quote">).series_id ===
-                          p.series_id,
-                      )
-                      .map((e) => (e.payload as PayloadOf<"quote">).revision),
-                  ) + 1,
-                pdf_id: null,
-              });
-              setRecord(undefined);
-              mark(true);
-            }}
-          >
-            Új verzió szerkesztése
-          </button>
-          <h3 className="space-top">Küldés / ügyféldöntés külön rögzítése</h3>
-          <Form
-            busy={action.busy}
-            label="Esemény rögzítése"
-            onSave={() =>
-              void action.act(async () => {
-                if (!record) throw new Error("Az ajánlat nincs mentve.");
-                await saveEntry(ctx, {
-                  type: "decision",
-                  quote_id: record.id,
-                  state: state as PayloadOf<"decision">["state"],
-                  decided_on: today(),
-                  notes: decisionNote,
+          <WorkspaceSection id="overview">
+            <div className="notice">
+              A PDF és a hozzá tartozó adatok változatlan pillanatfelvétel. Az
+              elkészítés nem jelenti, hogy elküldted vagy az ügyfél elfogadta.
+            </div>
+            <SummaryQuote p={p} />
+          </WorkspaceSection>
+          <WorkspaceSection id="documents" title="PDF és dokumentumok">
+            <DocumentList ctx={ctx} entityId={record?.id} />
+          </WorkspaceSection>
+          <WorkspaceSection id="overview">
+            <button
+              className="secondary"
+              disabled={action.busy}
+              onClick={() => {
+                set({
+                  ...p,
+                  sealed: false,
+                  revision:
+                    Math.max(
+                      ...entries(ctx, "quote")
+                        .filter(
+                          (e) =>
+                            (e.payload as PayloadOf<"quote">).series_id ===
+                            p.series_id,
+                        )
+                        .map((e) => (e.payload as PayloadOf<"quote">).revision),
+                    ) + 1,
+                  pdf_id: null,
                 });
-                await ctx.reload();
-                action.setMessage(
-                  "Az esemény rögzítve. Nem történt e-mail-küldés.",
-                );
-              })
-            }
-          >
-            <Select
-              label="Állapot"
-              value={state}
-              onChange={setState}
-              options={Object.entries({
-                sent: "Elküldtem",
-                changes: "Módosítást kért",
-                accepted: "Elfogadta",
-                rejected: "Elutasította",
-              })}
-            />
-            <Text
-              label="Döntés megjegyzése / igazolása"
-              rows={2}
-              value={decisionNote}
-              onChange={setDecisionNote}
-            />
-          </Form>
+                setRecord(undefined);
+                mark(true);
+              }}
+            >
+              Új verzió szerkesztése
+            </button>
+          </WorkspaceSection>
+          <WorkspaceSection id="decision">
+            <h3 className="space-top">Küldés / ügyféldöntés külön rögzítése</h3>
+            <Form
+              busy={action.busy}
+              label="Esemény rögzítése"
+              onSave={() =>
+                void action.act(async () => {
+                  if (!record) throw new Error("Az ajánlat nincs mentve.");
+                  await saveEntry(ctx, {
+                    type: "decision",
+                    quote_id: record.id,
+                    state: state as PayloadOf<"decision">["state"],
+                    decided_on: today(),
+                    notes: decisionNote,
+                  });
+                  await ctx.reload();
+                  markDecision(false);
+                  action.setMessage(
+                    "Az esemény rögzítve. Nem történt e-mail-küldés.",
+                  );
+                })
+              }
+            >
+              <Select
+                label="Állapot"
+                value={state}
+                onChange={(value) => {
+                  setState(value);
+                  markDecision(true);
+                }}
+                options={Object.entries({
+                  sent: "Elküldtem",
+                  changes: "Módosítást kért",
+                  accepted: "Elfogadta",
+                  rejected: "Elutasította",
+                })}
+              />
+              <Text
+                label="Döntés megjegyzése / igazolása"
+                rows={2}
+                value={decisionNote}
+                onChange={(value) => {
+                  setDecisionNote(value);
+                  markDecision(true);
+                }}
+              />
+            </Form>
+          </WorkspaceSection>
         </>
       ) : (
         <>
           <Form busy={action.busy} onSave={() => void action.act(persist)}>
-            <Text
-              label="Ajánlat címe"
-              required
-              value={p.title}
-              onChange={(title) => patch({ title })}
-            />
-            <div className="form-grid">
+            <WorkspaceSection id="basic" title="Alapadatok">
               <Text
-                label="Keltezés"
-                type="date"
+                label="Ajánlat címe"
                 required
-                value={p.issued_on}
-                onChange={(issued_on) => patch({ issued_on })}
+                value={p.title}
+                onChange={(title) => patch({ title })}
               />
-              <Text
-                label="Érvényesség"
-                type="date"
-                required
-                value={p.valid_until}
-                onChange={(valid_until) => patch({ valid_until })}
-              />
-            </div>
-            <PartyEditor
-              p={p.customer}
-              label="Ügyfél akkori adatai"
-              onChange={(customer) => patch({ customer })}
-            />
-            <PartyEditor
-              p={p.company}
-              label="Vállalkozás akkori adatai"
-              onChange={(company) => patch({ company })}
-            />
-            <Text
-              label="Munkavégzés helye"
-              value={p.site}
-              onChange={(site) => patch({ site })}
-            />
-            <Select
-              label="Adózási mód"
-              value={p.tax_mode}
-              onChange={(tax_mode) =>
-                patch({ tax_mode: tax_mode as typeof p.tax_mode })
-              }
-              options={Object.entries({
-                unknown: "Nincs megadva",
-                aam: "Alanyi adómentes",
-                vat: "Áfás",
-              })}
-            />
-            {p.tax_mode === "vat" && (
-              <label>
-                Áfa százalék
-                <input
+              <div className="form-grid">
+                <Text
+                  label="Keltezés"
+                  type="date"
                   required
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={p.vat_basis_points / 100}
-                  onChange={(e) =>
-                    patch({
-                      vat_basis_points: Math.round(
-                        Number(e.target.value) * 100,
-                      ),
-                    })
-                  }
+                  value={p.issued_on}
+                  onChange={(issued_on) => patch({ issued_on })}
                 />
-              </label>
-            )}
-            <h3>Tételek felmérésből</h3>
-            <select
-              aria-label="Felmérés kiválasztása"
-              defaultValue=""
-              onChange={(e) => {
-                const s = ctx.data.entries.find((s) => s.id === e.target.value)
-                  ?.payload as PayloadOf<"survey"> | undefined;
-                if (s)
-                  patch({
-                    lines: [
-                      ...p.lines,
-                      ...structuredClone([
-                        ...s.whole_property,
-                        ...s.rooms.flatMap((r) =>
-                          r.lines.map((l) => ({
-                            ...l,
-                            location:
-                              r.name + (l.location ? " / " + l.location : ""),
-                          })),
+                <Text
+                  label="Érvényesség"
+                  type="date"
+                  required
+                  value={p.valid_until}
+                  onChange={(valid_until) => patch({ valid_until })}
+                />
+              </div>
+            </WorkspaceSection>
+            <WorkspaceSection id="parties" title="Ügyfél és vállalkozás">
+              <PartyEditor
+                p={p.customer}
+                label="Ügyfél akkori adatai"
+                onChange={(customer) => patch({ customer })}
+              />
+              <PartyEditor
+                p={p.company}
+                label="Vállalkozás akkori adatai"
+                onChange={(company) => patch({ company })}
+              />
+              <Text
+                label="Munkavégzés helye"
+                value={p.site}
+                onChange={(site) => patch({ site })}
+              />
+            </WorkspaceSection>
+            <WorkspaceSection id="money" title="Adózás">
+              <Select
+                label="Adózási mód"
+                value={p.tax_mode}
+                onChange={(tax_mode) =>
+                  patch({ tax_mode: tax_mode as typeof p.tax_mode })
+                }
+                options={Object.entries({
+                  unknown: "Nincs megadva",
+                  aam: "Alanyi adómentes",
+                  vat: "Áfás",
+                })}
+              />
+              {p.tax_mode === "vat" && (
+                <label>
+                  Áfa százalék
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={p.vat_basis_points / 100}
+                    onChange={(e) =>
+                      patch({
+                        vat_basis_points: Math.round(
+                          Number(e.target.value) * 100,
                         ),
-                      ]).map((l) => ({ ...l, id: crypto.randomUUID() })),
-                    ],
-                  });
-                e.target.value = "";
-              }}
+                      })
+                    }
+                  />
+                </label>
+              )}
+            </WorkspaceSection>
+            <WorkspaceSection id="items" title="Munkatételek">
+              <h3>Tételek felmérésből</h3>
+              <select
+                aria-label="Felmérés kiválasztása"
+                defaultValue=""
+                onChange={(e) => {
+                  const s = ctx.data.entries.find(
+                    (s) => s.id === e.target.value,
+                  )?.payload as PayloadOf<"survey"> | undefined;
+                  if (s)
+                    patch({
+                      lines: [
+                        ...p.lines,
+                        ...structuredClone([
+                          ...s.whole_property,
+                          ...s.rooms.flatMap((r) =>
+                            r.lines.map((l) => ({
+                              ...l,
+                              location:
+                                r.name + (l.location ? " / " + l.location : ""),
+                            })),
+                          ),
+                        ]).map((l) => ({ ...l, id: crypto.randomUUID() })),
+                      ],
+                    });
+                  e.target.value = "";
+                }}
+              >
+                <option value="">Felmérés tételeinek hozzáadása…</option>
+                {entries(ctx, "survey").map((s) => (
+                  <option value={s.id} key={s.id}>
+                    {(s.payload as PayloadOf<"survey">).name}
+                  </option>
+                ))}
+              </select>
+              <Lines
+                ctx={ctx}
+                value={p.lines}
+                onChange={(lines) => patch({ lines })}
+              />
+            </WorkspaceSection>
+            <WorkspaceSection id="money" title="Költségek és kedvezmény">
+              <div className="form-grid">
+                <Amount
+                  label="Kézi anyagköltség (Ft)"
+                  value={p.materials_minor}
+                  onChange={(materials_minor) => patch({ materials_minor })}
+                />
+                <Amount
+                  label="Kifejezett kedvezmény (Ft)"
+                  value={p.discount_minor}
+                  onChange={(discount_minor) => patch({ discount_minor })}
+                />
+              </div>
+            </WorkspaceSection>
+            <WorkspaceSection
+              id="terms"
+              title="Fizetési és vállalási feltételek"
             >
-              <option value="">Felmérés tételeinek hozzáadása…</option>
-              {entries(ctx, "survey").map((s) => (
-                <option value={s.id} key={s.id}>
-                  {(s.payload as PayloadOf<"survey">).name}
-                </option>
-              ))}
-            </select>
-            <Lines
-              ctx={ctx}
-              value={p.lines}
-              onChange={(lines) => patch({ lines })}
-            />
-            <div className="form-grid">
-              <Amount
-                label="Kézi anyagköltség (Ft)"
-                value={p.materials_minor}
-                onChange={(materials_minor) => patch({ materials_minor })}
+              <Text
+                label="Fizetési és vállalási feltételek"
+                rows={5}
+                value={p.terms}
+                onChange={(terms) => patch({ terms })}
               />
-              <Amount
-                label="Kifejezett kedvezmény (Ft)"
-                value={p.discount_minor}
-                onChange={(discount_minor) => patch({ discount_minor })}
-              />
-            </div>
-            <Text
-              label="Fizetési és vállalási feltételek"
-              rows={5}
-              value={p.terms}
-              onChange={(terms) => patch({ terms })}
-            />
-            {totals ? (
-              <div className="notice">
-                Munkadíj: {formatMoney(totals.labor)} · Nettó:{" "}
-                {formatMoney(totals.net)} · Adó: {formatMoney(totals.tax)} ·
-                Végösszeg: <strong>{formatMoney(totals.gross)}</strong>
-              </div>
-            ) : (
-              <div className="notice error">
-                Az összegek nem érvényesek. A felmérésből átvett szöveges árakat
-                az ajánlatban számszerű munkadíjra kell cserélni.
-              </div>
-            )}
+            </WorkspaceSection>
+            <WorkspaceSection id="final" title="Összesítés">
+              {totals ? (
+                <div className="notice">
+                  Munkadíj: {formatMoney(totals.labor)} · Nettó:{" "}
+                  {formatMoney(totals.net)} · Adó: {formatMoney(totals.tax)} ·
+                  Végösszeg: <strong>{formatMoney(totals.gross)}</strong>
+                </div>
+              ) : (
+                <div className="notice error">
+                  Az összegek nem érvényesek. A felmérésből átvett szöveges
+                  árakat az ajánlatban számszerű munkadíjra kell cserélni.
+                </div>
+              )}
+            </WorkspaceSection>
           </Form>
-          <button
-            className="primary wide space-top"
-            disabled={
-              action.busy ||
-              !p.lines.length ||
-              !totals ||
-              p.tax_mode === "unknown" ||
-              !p.customer.address ||
-              !p.company.address
-            }
-            onClick={() =>
-              void action.act(async () => {
-                const record = await persist();
-                const final = { ...p, sealed: true };
-                const { makePdf } = await import("./pdf");
-                const bytes = await makePdf(final, ctx.repo, ctx.data);
-                const { attach } = await import("./documents");
-                const doc = await attach(
-                  ctx.repo,
-                  ctx.projectId ?? null,
-                  new File(
-                    [new Uint8Array(bytes)],
-                    `${p.number}-v${p.revision}.pdf`,
-                    { type: "application/pdf" },
-                  ),
-                  "quote",
-                  record.id,
-                );
-                const saved = await saveEntry(
-                  ctx,
-                  { ...final, pdf_id: doc.id },
-                  record,
-                );
-                setRecord(saved);
-                set(saved.payload as typeof p);
-                mark(false);
-                await ctx.reload();
-                action.setMessage(
-                  "A végleges ajánlat és eredeti PDF elmentve. Kiküldés nem történt.",
-                );
-              })
-            }
-          >
-            Végleges PDF-pillanatfelvétel készítése
-          </button>
-          <p className="small muted">
-            Véglegesítés előtt szükséges: legalább egy tétel, a két fél címe és
-            az adózási mód.
-          </p>
+          <WorkspaceSection id="final">
+            <button
+              className="primary wide space-top"
+              disabled={
+                action.busy ||
+                !p.lines.length ||
+                !totals ||
+                p.tax_mode === "unknown" ||
+                !p.customer.address ||
+                !p.company.address
+              }
+              onClick={() =>
+                void action.act(async () => {
+                  const record = await persist();
+                  const final = { ...p, sealed: true };
+                  const { makePdf } = await import("./pdf");
+                  const bytes = await makePdf(final, ctx.repo, ctx.data);
+                  const { attach } = await import("./documents");
+                  const doc = await attach(
+                    ctx.repo,
+                    ctx.projectId ?? null,
+                    new File(
+                      [new Uint8Array(bytes)],
+                      `${p.number}-v${p.revision}.pdf`,
+                      { type: "application/pdf" },
+                    ),
+                    "quote",
+                    record.id,
+                  );
+                  const saved = await saveEntry(
+                    ctx,
+                    { ...final, pdf_id: doc.id },
+                    record,
+                  );
+                  setRecord(saved);
+                  set(saved.payload as typeof p);
+                  mark(false);
+                  await ctx.reload();
+                  action.setMessage(
+                    "A végleges ajánlat és eredeti PDF elmentve. Kiküldés nem történt.",
+                  );
+                })
+              }
+            >
+              Végleges PDF-pillanatfelvétel készítése
+            </button>
+            <p className="small muted">
+              Véglegesítés előtt szükséges: legalább egy tétel, a két fél címe
+              és az adózási mód.
+            </p>
+          </WorkspaceSection>
         </>
       )}
-    </Modal>
+    </RecordWorkspace>
   );
 }
 export function PartyEditor({
@@ -833,6 +890,7 @@ function Materials({ ctx }: { ctx: Context }) {
   const plans = entries(ctx, "materials");
   const [chosen, choose] = useState("");
   const action = useAction();
+  const [editing, setEditing] = useState(false);
   const [preview, setPreview] = useState<{
     old?: Entry;
     next: PayloadOf<"materials">;
@@ -915,19 +973,58 @@ function Materials({ ctx }: { ctx: Context }) {
           </button>
         </div>
       )}
-      {plans[0] && (
+      {plans[0] && !editing && (
+        <>
+          <div className="line-card">
+            {(plans[0].payload as PayloadOf<"materials">).lines.map(
+              (line, index) => (
+                <div key={index}>
+                  <strong>{line.name}</strong>
+                  <p>
+                    Számított: {quantity(line.calculated_milli)} {line.unit}
+                  </p>
+                  <p>
+                    Szükséges:{" "}
+                    {quantity(line.override_milli ?? line.calculated_milli)}{" "}
+                    {line.unit}
+                  </p>
+                </div>
+              ),
+            )}
+          </div>
+          <button className="primary" onClick={() => setEditing(true)}>
+            Anyaglista szerkesztése
+          </button>
+        </>
+      )}
+      {plans[0] && editing && (
         <MaterialPlan
-          key={`${plans[0].id}/${plans[0].version}`}
+          key={plans[0].id}
           ctx={ctx}
           entry={plans[0]}
+          onClose={() => setEditing(false)}
         />
       )}
     </section>
   );
 }
-function MaterialPlan({ ctx, entry }: { ctx: Context; entry: Entry }) {
+function MaterialPlan({
+  ctx,
+  entry,
+  onClose,
+}: {
+  ctx: Context;
+  entry: Entry;
+  onClose: () => void;
+}) {
   const [p, set] = useState(entry.payload as PayloadOf<"materials">);
   const action = useAction();
+  const [record, setRecord] = useState(entry);
+  const [dirty, mark] = useState(false);
+  const change = (value: typeof p) => {
+    mark(true);
+    set(value);
+  };
   const current = ctx.data.entries.find((e) => e.id === p.quote_id);
   const newer = entries(ctx, "quote").some(
     (e) =>
@@ -937,7 +1034,20 @@ function MaterialPlan({ ctx, entry }: { ctx: Context; entry: Entry }) {
         ((current?.payload as PayloadOf<"quote">)?.revision ?? 0),
   );
   return (
-    <>
+    <RecordWorkspace
+      title="Anyaglista"
+      onClose={onClose}
+      dirty={dirty}
+      busy={action.busy}
+      saveLabel="Mentés"
+      toolbar={<ReportButton ctx={ctx} tab={3} disabled={action.busy} />}
+      sections={[
+        { id: "items", label: "Mennyiségek" },
+        { id: "manual", label: "Kézi kiegészítések" },
+        { id: "notes", label: "Anyagok megjegyzései" },
+        { id: "source", label: "Kapcsolódó ajánlat" },
+      ]}
+    >
       {newer && (
         <div className="notice">
           Újabb ajánlatverzió van. A lista nem változott automatikusan; válaszd
@@ -949,99 +1059,130 @@ function MaterialPlan({ ctx, entry }: { ctx: Context; entry: Entry }) {
         busy={action.busy}
         onSave={() =>
           void action.act(async () => {
-            await saveEntry(ctx, p, entry);
+            const saved = await saveEntry(ctx, p, record);
+            setRecord(saved);
+            mark(false);
             await ctx.reload();
             action.setMessage("Anyaglista mentve.");
           })
         }
       >
-        {p.lines.map((l, i) => (
-          <div className="line-card" key={`${l.material_id}/${i}`}>
-            <strong>
-              {l.name} · {l.unit}
-              {l.manual ? " · kézi tétel" : ""}
-            </strong>
-            <p className="small muted">
-              Számított: {quantity(l.calculated_milli)} {l.unit}
-            </p>
-            <Amount
-              label="Ténylegesen szükséges mennyiség"
-              quantity
-              value={l.override_milli ?? l.calculated_milli}
-              onChange={(override_milli) =>
-                set({
-                  ...p,
-                  lines: p.lines.map((r, n) =>
-                    n === i ? { ...r, override_milli } : r,
-                  ),
-                })
-              }
-            />
-            <Text
-              label="Anyag megjegyzése"
-              value={l.notes}
-              onChange={(notes) =>
-                set({
-                  ...p,
-                  lines: p.lines.map((r, n) => (n === i ? { ...r, notes } : r)),
-                })
-              }
-            />
-          </div>
-        ))}
-        <button
-          type="button"
-          className="secondary"
-          onClick={() =>
-            set({
-              ...p,
-              lines: [
-                ...p.lines,
-                {
-                  material_id: crypto.randomUUID(),
-                  name: "",
-                  unit: "db",
-                  calculated_milli: 0,
-                  override_milli: 1000,
-                  manual: true,
-                  notes: "",
-                },
-              ],
-            })
-          }
-        >
-          Kézi kiegészítés
-        </button>
-        {p.lines
-          .filter((l) => l.manual)
-          .map((l) => (
-            <div key={l.material_id}>
-              <Text
-                label="Kézi anyag neve"
-                required
-                value={l.name}
-                onChange={(name) =>
-                  set({
+        <WorkspaceSection id="items" title="Anyagmennyiségek">
+          {" "}
+          {p.lines.map((l, i) => (
+            <div className="line-card" key={`${l.material_id}/${i}`}>
+              <strong>
+                {l.name} · {l.unit}
+                {l.manual ? " · kézi tétel" : ""}
+              </strong>
+              <p className="small muted">
+                Számított: {quantity(l.calculated_milli)} {l.unit}
+              </p>
+              <Amount
+                label="Ténylegesen szükséges mennyiség"
+                quantity
+                value={l.override_milli ?? l.calculated_milli}
+                onChange={(override_milli) =>
+                  change({
                     ...p,
-                    lines: p.lines.map((r) => (r === l ? { ...r, name } : r)),
-                  })
-                }
-              />
-              <Text
-                label="Kézi anyag mértékegysége"
-                required
-                value={l.unit}
-                onChange={(unit) =>
-                  set({
-                    ...p,
-                    lines: p.lines.map((r) => (r === l ? { ...r, unit } : r)),
+                    lines: p.lines.map((r, n) =>
+                      n === i ? { ...r, override_milli } : r,
+                    ),
                   })
                 }
               />
             </div>
           ))}
+        </WorkspaceSection>
+        <WorkspaceSection id="manual" title="Kézi kiegészítések">
+          {" "}
+          <button
+            type="button"
+            className="secondary"
+            onClick={() =>
+              change({
+                ...p,
+                lines: [
+                  ...p.lines,
+                  {
+                    material_id: crypto.randomUUID(),
+                    name: "",
+                    unit: "db",
+                    calculated_milli: 0,
+                    override_milli: 1000,
+                    manual: true,
+                    notes: "",
+                  },
+                ],
+              })
+            }
+          >
+            Kézi kiegészítés
+          </button>
+          {p.lines
+            .filter((l) => l.manual)
+            .map((l) => (
+              <div key={l.material_id}>
+                <Text
+                  label="Kézi anyag neve"
+                  required
+                  value={l.name}
+                  onChange={(name) =>
+                    change({
+                      ...p,
+                      lines: p.lines.map((r) => (r === l ? { ...r, name } : r)),
+                    })
+                  }
+                />
+                <Text
+                  label="Kézi anyag mértékegysége"
+                  required
+                  value={l.unit}
+                  onChange={(unit) =>
+                    change({
+                      ...p,
+                      lines: p.lines.map((r) => (r === l ? { ...r, unit } : r)),
+                    })
+                  }
+                />
+              </div>
+            ))}
+        </WorkspaceSection>
+        <WorkspaceSection id="notes" title="Anyagok megjegyzései">
+          {p.lines.length ? (
+            <SurveyTextEditor
+              fields={p.lines.map((line, index) => ({
+                key: String(index),
+                tab: line.name || "Új anyag",
+                label: "Anyag megjegyzése",
+                value: line.notes,
+              }))}
+              onChange={(key, notes) =>
+                change({
+                  ...p,
+                  lines: p.lines.map((line, index) =>
+                    index === Number(key) ? { ...line, notes } : line,
+                  ),
+                })
+              }
+            />
+          ) : (
+            <p>Nincs anyagtétel.</p>
+          )}
+        </WorkspaceSection>
+        <WorkspaceSection id="source" title="Kapcsolódó ajánlat">
+          <p>
+            {current?.payload.type === "quote"
+              ? `${current.payload.number} · ${current.payload.revision}. verzió · ${current.payload.title}`
+              : "Az ajánlat nem található."}
+          </p>
+          <p>
+            A PDF letöltése a mentett anyaglistát tartalmazza. A változtatásokat
+            előbb mentsd el.
+          </p>
+        </WorkspaceSection>
       </Form>
-    </>
+    </RecordWorkspace>
   );
 }
 function Handovers({ ctx, project }: { ctx: Context; project: Project }) {
@@ -1159,115 +1300,149 @@ function HandoverEditor({
     return saved;
   }
   return (
-    <Modal title="Átadási jegyzőkönyv" dirty={dirty} onClose={onClose}>
+    <RecordWorkspace
+      title="Átadási jegyzőkönyv"
+      dirty={dirty}
+      busy={action.busy}
+      onClose={onClose}
+      saveLabel={!p.sealed && !signing ? "Mentés" : undefined}
+      sections={
+        p.sealed
+          ? [
+              { id: "overview", label: "Végleges átadás" },
+              { id: "documents", label: "PDF és dokumentumok" },
+            ]
+          : signing
+            ? [
+                { id: "review", label: "Tartalom áttekintése" },
+                { id: "signatures", label: "Aláírások és PDF" },
+              ]
+            : [
+                { id: "basic", label: "Alapadatok és ügyfél" },
+                { id: "descriptions", label: "Elvégzett munka / leírások" },
+                { id: "checks", label: "Lezárási ellenőrzések" },
+                { id: "photos", label: "Fényképek" },
+              ]
+      }
+    >
       {action.feedback}
       {p.sealed ? (
         <>
-          <HandoverSummary p={p} />
-          <PhotoPreview ctx={ctx} ids={p.photo_ids} />
-          <DocumentList ctx={ctx} entityId={record?.id} />
-          <button
-            className="secondary"
-            onClick={() => {
-              set({
-                ...p,
-                sealed: false,
-                pdf_id: null,
-                customer_signature: "",
-                contractor_signature: "",
-                signed_at: "",
-                revision:
-                  Math.max(
-                    ...entries(ctx, "handover")
-                      .filter(
-                        (e) =>
-                          (e.payload as PayloadOf<"handover">).series_id ===
-                          p.series_id,
-                      )
-                      .map(
-                        (e) => (e.payload as PayloadOf<"handover">).revision,
-                      ),
-                  ) + 1,
-              });
-              setRecord(undefined);
-              mark(true);
-            }}
-          >
-            Új verzió – új aláírásokkal
-          </button>
+          <WorkspaceSection id="overview">
+            <HandoverSummary p={p} />
+            <PhotoPreview ctx={ctx} ids={p.photo_ids} />
+          </WorkspaceSection>
+          <WorkspaceSection id="documents" title="PDF és dokumentumok">
+            <DocumentList ctx={ctx} entityId={record?.id} />
+          </WorkspaceSection>
+          <WorkspaceSection id="overview">
+            <button
+              className="secondary"
+              onClick={() => {
+                set({
+                  ...p,
+                  sealed: false,
+                  pdf_id: null,
+                  customer_signature: "",
+                  contractor_signature: "",
+                  signed_at: "",
+                  revision:
+                    Math.max(
+                      ...entries(ctx, "handover")
+                        .filter(
+                          (e) =>
+                            (e.payload as PayloadOf<"handover">).series_id ===
+                            p.series_id,
+                        )
+                        .map(
+                          (e) => (e.payload as PayloadOf<"handover">).revision,
+                        ),
+                    ) + 1,
+                });
+                setRecord(undefined);
+                mark(true);
+              }}
+            >
+              Új verzió – új aláírásokkal
+            </button>
+          </WorkspaceSection>
         </>
       ) : signing ? (
         <>
-          <HandoverSummary p={p} />
-          <PhotoPreview ctx={ctx} ids={p.photo_ids} />
-          <div className="notice">
-            Az aláírások ehhez az itt látható tartalomhoz kapcsolódnak. A
-            tartalom módosítása törli az új változat aláírásait.
-          </div>
-          <Signature
-            label="Ügyfél aláírása"
-            value={p.customer_signature}
-            onChange={(customer_signature) => {
-              mark(true);
-              set({
-                ...p,
-                customer_signature,
-                signed_at: new Date().toISOString(),
-              });
-            }}
-          />
-          <Signature
-            label="Vállalkozó aláírása"
-            value={p.contractor_signature}
-            onChange={(contractor_signature) => {
-              mark(true);
-              set({
-                ...p,
-                contractor_signature,
-                signed_at: new Date().toISOString(),
-              });
-            }}
-          />
-          <div className="row">
-            <button
-              className="secondary"
-              disabled={action.busy}
-              onClick={() => setSigning(false)}
-            >
-              Vissza a tartalomhoz
-            </button>
-            <button
-              className="primary"
-              disabled={action.busy}
-              onClick={() =>
-                void action.act(async () => {
-                  const record = await persist();
-                  const final = { ...p, sealed: true };
-                  const { makePdf } = await import("./pdf");
-                  const bytes = await makePdf(final, ctx.repo, ctx.data);
-                  const { attach } = await import("./documents");
-                  const doc = await attach(
-                    ctx.repo,
-                    ctx.projectId ?? null,
-                    new File(
-                      [new Uint8Array(bytes)],
-                      `${p.number}-v${p.revision}.pdf`,
-                      { type: "application/pdf" },
-                    ),
-                    "handover",
-                    record.id,
-                  );
-                  await persist({ ...final, pdf_id: doc.id }, record);
-                  setSigning(false);
-                  action.setMessage(
-                    "A jegyzőkönyv és eredeti PDF véglegesen elmentve.",
-                  );
-                })
-              }
-            >
-              Végleges jegyzőkönyv és PDF
-            </button>
-          </div>
+          <WorkspaceSection id="review" title="Tartalom áttekintése">
+            <HandoverSummary p={p} />
+            <PhotoPreview ctx={ctx} ids={p.photo_ids} />
+            <div className="notice">
+              Az aláírások ehhez az itt látható tartalomhoz kapcsolódnak. A
+              tartalom módosítása törli az új változat aláírásait.
+            </div>
+          </WorkspaceSection>
+          <WorkspaceSection id="signatures" title="Aláírások és PDF">
+            <Signature
+              label="Ügyfél aláírása"
+              value={p.customer_signature}
+              onChange={(customer_signature) => {
+                mark(true);
+                set({
+                  ...p,
+                  customer_signature,
+                  signed_at: new Date().toISOString(),
+                });
+              }}
+            />
+            <Signature
+              label="Vállalkozó aláírása"
+              value={p.contractor_signature}
+              onChange={(contractor_signature) => {
+                mark(true);
+                set({
+                  ...p,
+                  contractor_signature,
+                  signed_at: new Date().toISOString(),
+                });
+              }}
+            />
+            <div className="row">
+              <button
+                className="secondary"
+                disabled={action.busy}
+                onClick={() => setSigning(false)}
+              >
+                Vissza a tartalomhoz
+              </button>
+              <button
+                className="primary"
+                disabled={action.busy}
+                onClick={() =>
+                  void action.act(async () => {
+                    const record = await persist();
+                    const final = { ...p, sealed: true };
+                    const { makePdf } = await import("./pdf");
+                    const bytes = await makePdf(final, ctx.repo, ctx.data);
+                    const { attach } = await import("./documents");
+                    const doc = await attach(
+                      ctx.repo,
+                      ctx.projectId ?? null,
+                      new File(
+                        [new Uint8Array(bytes)],
+                        `${p.number}-v${p.revision}.pdf`,
+                        { type: "application/pdf" },
+                      ),
+                      "handover",
+                      record.id,
+                    );
+                    await persist({ ...final, pdf_id: doc.id }, record);
+                    setSigning(false);
+                    action.setMessage(
+                      "A jegyzőkönyv és eredeti PDF véglegesen elmentve.",
+                    );
+                  })
+                }
+              >
+                Végleges jegyzőkönyv és PDF
+              </button>
+            </div>
+          </WorkspaceSection>
         </>
       ) : (
         <Form
@@ -1279,90 +1454,109 @@ function HandoverEditor({
             })
           }
         >
-          <Text
-            label="Munkavégzés dátuma"
-            type="date"
-            value={p.performed_on}
-            required
-            onChange={(performed_on) => patch({ performed_on })}
-          />
-          <PartyEditor
-            label="Ügyfél"
-            p={p.customer}
-            onChange={(customer) => patch({ customer })}
-          />
-          <Text
-            label="Munkavégzés helye"
-            value={p.site}
-            onChange={(site) => patch({ site })}
-          />
-          <Text
-            label="Ténylegesen elvégzett munka"
-            required
-            rows={5}
-            value={p.work}
-            onChange={(work) => patch({ work })}
-          />
-          <Text
-            label="Eltérések"
-            rows={3}
-            value={p.deviations}
-            onChange={(deviations) => patch({ deviations })}
-          />
-          <Text
-            label="Pótmunkák"
-            rows={3}
-            value={p.extras}
-            onChange={(extras) => patch({ extras })}
-          />
-          <Text
-            label="Fennmaradó feladatok"
-            rows={3}
-            value={p.remaining}
-            onChange={(remaining) => patch({ remaining })}
-          />
-          <Text
-            label="Kiegészítő átadási feltételek"
-            rows={4}
-            value={p.terms ?? ""}
-            onChange={(terms) => patch({ terms })}
-          />
-          <h3>Lezárási ellenőrzések</h3>
-          <Check
-            label="Rendezett munkaterület"
-            value={p.checks.tidy}
-            onChange={(tidy) => patch({ checks: { ...p.checks, tidy } })}
-          />
-          <Check
-            label="Ügyfél tájékoztatása"
-            value={p.checks.informed}
-            onChange={(informed) =>
-              patch({ checks: { ...p.checks, informed } })
-            }
-          />
-          <Check
-            label="Dokumentumok átadása"
-            value={p.checks.documents}
-            onChange={(documents) =>
-              patch({ checks: { ...p.checks, documents } })
-            }
-          />
-          <PhotoPicker
-            ctx={ctx}
-            value={p.photo_ids}
-            onChange={(photo_ids) => patch({ photo_ids })}
-          />
-          <button
-            type="button"
-            className="secondary space-top"
-            disabled={!p.work.trim() || !Object.values(p.checks).every(Boolean)}
-            onClick={() => setSigning(true)}
+          <WorkspaceSection id="basic" title="Alapadatok és ügyfél">
+            <Text
+              label="Munkavégzés dátuma"
+              type="date"
+              value={p.performed_on}
+              required
+              onChange={(performed_on) => patch({ performed_on })}
+            />
+            <PartyEditor
+              label="Ügyfél"
+              p={p.customer}
+              onChange={(customer) => patch({ customer })}
+            />
+            <Text
+              label="Munkavégzés helye"
+              value={p.site}
+              onChange={(site) => patch({ site })}
+            />
+          </WorkspaceSection>
+          <WorkspaceSection
+            id="descriptions"
+            title="Elvégzett munka és leírások"
           >
-            Tartalom áttekintése és aláírás
-          </button>
+            <SurveyTextEditor
+              fields={[
+                {
+                  key: "work",
+                  tab: "Elvégzett munka",
+                  label: "Ténylegesen elvégzett munka",
+                  value: p.work,
+                },
+                {
+                  key: "deviations",
+                  tab: "Eltérések",
+                  label: "Eltérések",
+                  value: p.deviations,
+                },
+                {
+                  key: "extras",
+                  tab: "Pótmunkák",
+                  label: "Pótmunkák",
+                  value: p.extras,
+                },
+                {
+                  key: "remaining",
+                  tab: "Fennmaradó feladatok",
+                  label: "Fennmaradó feladatok",
+                  value: p.remaining,
+                },
+                {
+                  key: "terms",
+                  tab: "Átadási feltételek",
+                  label: "Kiegészítő átadási feltételek",
+                  value: p.terms ?? "",
+                },
+              ]}
+              onChange={(key, value) => patch({ [key]: value })}
+            />
+          </WorkspaceSection>
+          <WorkspaceSection id="checks">
+            <h3>Lezárási ellenőrzések</h3>
+            <Check
+              label="Rendezett munkaterület"
+              value={p.checks.tidy}
+              onChange={(tidy) => patch({ checks: { ...p.checks, tidy } })}
+            />
+            <Check
+              label="Ügyfél tájékoztatása"
+              value={p.checks.informed}
+              onChange={(informed) =>
+                patch({ checks: { ...p.checks, informed } })
+              }
+            />
+            <Check
+              label="Dokumentumok átadása"
+              value={p.checks.documents}
+              onChange={(documents) =>
+                patch({ checks: { ...p.checks, documents } })
+              }
+            />
+          </WorkspaceSection>
+          <WorkspaceSection id="photos" title="Fényképek">
+            <PhotoPicker
+              ctx={ctx}
+              value={p.photo_ids}
+              onChange={(photo_ids) => patch({ photo_ids })}
+            />
+          </WorkspaceSection>
+          <WorkspaceSection id="checks">
+            <button
+              type="button"
+              className="secondary space-top"
+              disabled={
+                !p.work.trim() || !Object.values(p.checks).every(Boolean)
+              }
+              onClick={() => setSigning(true)}
+            >
+              Tartalom áttekintése és aláírás
+            </button>
+          </WorkspaceSection>
         </Form>
       )}
-    </Modal>
+    </RecordWorkspace>
   );
 }
 function HandoverSummary({ p }: { p: PayloadOf<"handover"> }) {

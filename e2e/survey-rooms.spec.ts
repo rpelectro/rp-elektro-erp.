@@ -299,7 +299,11 @@ test("teljes oldalas felmérés: fülek, keresés, mentés, fotók, mobil és PD
     .getByRole("button", { name: "Árajánlat", exact: true })
     .click();
   await page.getByRole("button", { name: "Új ajánlat", exact: true }).click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.locator(".record-workspace");
+  await dialog
+    .getByRole("navigation", { name: "Dokumentum részei" })
+    .getByRole("button", { name: "Munkatételek", exact: true })
+    .click();
   await dialog
     .getByRole("combobox", { name: "Felmérés kiválasztása", exact: true })
     .selectOption({ label: "Helyiséges felmérés" });

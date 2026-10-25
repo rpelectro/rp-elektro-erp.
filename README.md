@@ -90,6 +90,17 @@ A részek közötti váltás nem dobja el a módosításokat. Mentetlen felmér�
 elhagyásakor megerősítést kér. A felmérés leírásaihoz nem nyílik felugró ablak.
 Más űrlapok hosszú szövegeinél továbbra is használható a Nagyobb szerkesztőnézet.
 
+Az **árajánlat, anyaglista, átadási jegyzőkönyv és számlanyilvántartás** szerkesztői
+szintén teljes oldalas munkaterületet használnak, bal oldali részekkel és felső
+mentési művelettel. Az ajánlatban külön érhetők el a felek, tételek, árazás,
+feltételek és PDF-véglegesítés. Az átadás hosszú leírásai fülek között válthatók;
+a tartalomáttekintés és az aláírás külön lépés marad. A számla befizetései és
+eredeti csatolmányai külön részek. Az anyaglista a **Szerkesztés** gombbal nyitható
+meg, a mennyiségek, kézi kiegészítések és megjegyzések külön kezelhetők.
+A részek közötti váltás megőrzi a módosításokat; hibás mező esetén a mentés a
+megfelelő részhez navigál. A végleges dokumentumok változtathatatlansága és az
+új verziós módosítás szabálya megmarad.
+
 A projekt minden fülén van **PDF letöltése** gomb az adott fül mentett adataihoz.
 A felmérés listájában egyenként, a szerkesztőjében pedig az aktuális űrlaptartalomból
 is készíthető PDF. A hosszú szövegek több oldalra tördelődnek, a helyiségfotók a

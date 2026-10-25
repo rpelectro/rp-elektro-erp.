@@ -339,3 +339,53 @@ pre {
 .survey-room-content {
   padding-top: 1rem;
 }
+.long-text-field {
+  margin-bottom: 1.25rem;
+}
+.long-text-field > label {
+  margin-bottom: 0.25rem;
+}
+.auto-textarea {
+  min-height: 120px;
+  max-height: none;
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-y: hidden;
+}
+.text-editor-dialog {
+  width: min(1100px, calc(100vw - 24px));
+  height: calc(100dvh - 40px);
+  max-height: calc(100dvh - 40px);
+  padding: 20px;
+  border: 0;
+  border-radius: 12px;
+  color: inherit;
+  background: #fff;
+}
+.text-editor-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.text-editor-dialog::backdrop {
+  background: #101b28aa;
+}
+.text-editor-dialog textarea {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.text-editor-dialog .dialog-heading {
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+}
+.report-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}

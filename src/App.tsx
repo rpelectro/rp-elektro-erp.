@@ -54,6 +54,7 @@ import { WorkspaceSettings } from "./WorkspaceSettings";
 import { SyncBar } from "./SyncBar";
 import { Upcoming } from "./Upcoming";
 import { CatalogImport } from "./CatalogImport";
+import { LongText } from "./LongText";
 
 type Page =
   "dashboard" | "projects" | "customers" | "settings" | "calendar" | "invoices";
@@ -1437,15 +1438,14 @@ function Area({
   name: string;
   value?: string;
 }) {
+  const [text, setText] = useState(value ?? "");
   return (
-    <label>
-      {label}
-      <textarea
-        name={name}
-        rows={4}
-        maxLength={5000}
-        defaultValue={value ?? ""}
-      />
-    </label>
+    <LongText
+      label={label}
+      name={name}
+      value={text}
+      onChange={setText}
+      maxLength={5000}
+    />
   );
 }

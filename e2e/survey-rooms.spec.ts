@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { PDFDocument } from "pdf-lib";
 
-test("helyiségenkénti fotók mentés és újranyitás után is külön maradnak", async ({
+test("helyiségfotók, hosszú szöveg szerkesztése és projekt PDF-ek", async ({
   page,
-}) => {
+}, info) => {
+  test.setTimeout(90000);
+  page.setDefaultTimeout(15000);
   await page.goto("/");
   await page.getByRole("button", { name: "Helyi próbamód megnyitása" }).click();
   await page
@@ -38,6 +42,42 @@ test("helyiségenkénti fotók mentés és újranyitás után is külön maradna
   await dialog
     .getByLabel("Felmérés neve", { exact: true })
     .fill("Helyiséges felmérés");
+  const longText = Array.from(
+    { length: 80 },
+    (_, index) =>
+      `${index + 1}. Hosszú magyar leírás: árvíztűrő tükörfúrógép, megvizsgált vezetékek és csatlakozók.`,
+  ).join("\n");
+  await dialog.getByLabel("Meglévő állapot", { exact: true }).fill(longText);
+  await expect(
+    dialog.getByLabel("Meglévő állapot", { exact: true }),
+  ).toHaveJSProperty(
+    "scrollHeight",
+    await dialog
+      .getByLabel("Meglévő állapot", { exact: true })
+      .evaluate((node) => node.clientHeight),
+  );
+  await dialog
+    .locator(".long-text-field")
+    .filter({ has: page.getByLabel("Meglévő állapot", { exact: true }) })
+    .getByRole("button", { name: "Nagyobb szerkesztőnézet", exact: true })
+    .click();
+  const largeEditor = page.getByRole("dialog", {
+    name: "Szöveg szerkesztése: Meglévő állapot",
+    exact: true,
+  });
+  await expect(largeEditor).toBeVisible();
+  await largeEditor
+    .getByRole("textbox", { name: "Meglévő állapot", exact: true })
+    .fill(longText + "\nVÉGSŐ ÁLLAPOTLEÍRÁS");
+  await page.keyboard.press("Escape");
+  await expect(largeEditor).not.toBeVisible();
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByLabel("Meglévő állapot", { exact: true }),
+  ).toHaveValue(longText + "\nVÉGSŐ ÁLLAPOTLEÍRÁS");
+  await dialog
+    .getByLabel("Belső megjegyzés – nem kerül az ügyfél PDF-jére")
+    .fill("TITKOS-BELSO-NE-EXPORTALD");
   for (const name of ["Nappali", "Konyha"]) {
     await dialog
       .getByRole("combobox", { name: "Választható helyiség" })
@@ -74,6 +114,15 @@ test("helyiségenkénti fotók mentés és újranyitás után is külön maradna
         room.getByRole("img", { name: file, exact: true }),
       ).toBeVisible();
   }
+  const pdfDownload = page.waitForEvent("download");
+  await dialog
+    .getByRole("button", { name: "PDF letöltése", exact: true })
+    .click();
+  const pdfPath = info.outputPath("felmeres.pdf");
+  await (await pdfDownload).saveAs(pdfPath);
+  expect(
+    (await PDFDocument.load(await readFile(pdfPath))).getPageCount(),
+  ).toBeGreaterThan(2);
   await dialog.getByRole("button", { name: "Mentés", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await page.getByRole("button", { name: "Megnyitás", exact: true }).click();
@@ -124,4 +173,30 @@ test("helyiségenkénti fotók mentés és újranyitás után is külön maradna
   );
   await expect(living.getByRole("img")).toHaveCount(1);
   await expect(kitchen.getByRole("img")).toHaveCount(1);
+  await dialog.getByRole("button", { name: "Mentés", exact: true }).click();
+  for (const tab of [
+    "Áttekintés",
+    "Felmérés",
+    "Árajánlat",
+    "Anyagok",
+    "Jegyzőkönyv",
+    "Számlák",
+    "Dokumentumok",
+  ]) {
+    await page
+      .locator(".project-tabs")
+      .getByRole("button", { name: tab, exact: true })
+      .click();
+    const download = page.waitForEvent("download");
+    await page
+      .locator(".report-toolbar")
+      .first()
+      .getByRole("button", { name: "PDF letöltése", exact: true })
+      .click();
+    const path = info.outputPath(`${tab}.pdf`);
+    await (await download).saveAs(path);
+    expect(
+      (await PDFDocument.load(await readFile(path))).getPageCount(),
+    ).toBeGreaterThan(0);
+  }
 });

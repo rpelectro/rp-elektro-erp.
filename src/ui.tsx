@@ -13,6 +13,7 @@ import {
   type Repository,
 } from "./domain";
 import { today, parseQuantity, type Payload, type Entry } from "./business";
+import { LongText } from "./LongText";
 export interface Context {
   repo: Repository;
   data: Snapshot;
@@ -95,28 +96,28 @@ export function Text({
   disabled?: boolean;
   type?: string;
 }) {
+  if (rows)
+    return (
+      <LongText
+        label={label}
+        value={value}
+        onChange={onChange}
+        rows={rows}
+        disabled={disabled}
+        required={required}
+      />
+    );
   return (
     <label>
       {label}
-      {rows ? (
-        <textarea
-          value={value}
-          required={required}
-          rows={rows}
-          disabled={disabled}
-          maxLength={10000}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      ) : (
-        <input
-          value={value}
-          required={required}
-          type={type}
-          disabled={disabled}
-          maxLength={10000}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
+      <input
+        value={value}
+        required={required}
+        type={type}
+        disabled={disabled}
+        maxLength={10000}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </label>
   );
 }

@@ -34,6 +34,7 @@ import {
 import { Invoices } from "./Invoices";
 import { PhotoPreview } from "./PhotoPreview";
 import { RoomPhotos } from "./RoomPhotos";
+import { ReportButton } from "./ReportButton";
 const tabs = [
   "Áttekintés",
   "Felmérés",
@@ -65,6 +66,10 @@ export function ProjectModules({
             {label}
           </button>
         ))}
+      </div>
+      <div className="report-toolbar">
+        <span>{tabs[tab]} – mentett projektadatok exportálása</span>
+        <ReportButton ctx={ctx} tab={tab} />
       </div>
       {tab === 0 ? (
         <>
@@ -256,6 +261,7 @@ function Surveys({ ctx }: { ctx: Context }) {
                 </small>
               </div>
               <div className="row">
+                <ReportButton ctx={ctx} tab={1} survey={e.payload} />
                 <button className="secondary" onClick={() => setEdit(e)}>
                   Megnyitás
                 </button>
@@ -319,6 +325,17 @@ function SurveyEditor({
       dirty={dirty}
     >
       {action.feedback}
+      <div className="report-toolbar">
+        <span>
+          PDF a jelenlegi űrlaptartalomból. A belső megjegyzés kimarad.
+        </span>
+        <ReportButton
+          ctx={ctx}
+          tab={1}
+          survey={p}
+          disabled={uploadBusy || action.busy}
+        />
+      </div>
       <Form
         busy={action.busy || uploadBusy}
         onSave={() =>

@@ -68,6 +68,25 @@ A `public/_headers` Supabase- és workers.dev-címeket enged a kapcsolat számá
 
 ## Offline használat és mentés
 
+### Hosszú leírások és projekt-PDF
+
+A többsoros leírásmezők a tartalmukkal együtt nőnek. A **Nagyobb szerkesztőnézet**
+gomb külön, közel teljes képernyős szerkesztőt nyit; a **Vissza az űrlaphoz** gomb
+vagy az Escape visszavisz az eredeti űrlapra. A módosításokat az űrlap **Mentés**
+gombja rögzíti, a nagy nézet bezárása önmagában nem ment az adatbázisba.
+
+A projekt minden fülén van **PDF letöltése** gomb az adott fül mentett adataihoz.
+A felmérés listájában egyenként, a szerkesztőjében pedig az aktuális űrlaptartalomból
+is készíthető PDF. A hosszú szövegek több oldalra tördelődnek, a helyiségfotók a
+saját helyiségük alatt szerepelnek. A belső felmérésjegyzet és a projekt belső
+megjegyzése nem kerül az exportba. A Markdownból bemásolt `#` címsorok PDF-ben
+címsorként jelennek meg.
+
+Az új export letölthető kivonat; nem küldi ki és nem archiválja automatikusan a
+dokumentumot. A számlafül exportja számlanyilvántartás, nem új számla. Az ajánlat és
+az átadás végleges, eredeti PDF-je továbbra is a meglévő véglegesítési művelettel
+készül. A Dokumentumok fül PDF-je fájljegyzék, nem a csatolmányok összefűzése.
+
 A felmérés **Helyiségek** részében alaphelyiségek választhatók (például nappali,
 konyha, hálószoba, fürdőszoba), és egyedi helyiség is felvehető. Minden helyiségnek
 saját fotófeltöltője van: több kép is kiválasztható, és a képek előnézete az adott

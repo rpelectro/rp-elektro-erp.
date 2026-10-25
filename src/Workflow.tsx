@@ -131,10 +131,12 @@ export function Lines({
   ctx,
   value,
   onChange,
+  allowTextPrice = false,
 }: {
   ctx: Context;
   value: WorkLine[];
   onChange: (v: WorkLine[]) => void;
+  allowTextPrice?: boolean;
 }) {
   const [chosen, setChosen] = useState("");
   const add = () => {
@@ -192,12 +194,45 @@ export function Lines({
               value={line.unit}
               onChange={(unit) => update(i, { unit })}
             />
-            <Amount
-              label="Egység munkadíja (Ft)"
-              value={line.price_minor}
-              onChange={(price_minor) => update(i, { price_minor })}
-            />
+            {allowTextPrice && (
+              <Select
+                label="Ár megadásának módja"
+                value={line.price_text === undefined ? "number" : "text"}
+                options={[
+                  ["number", "Összeg (Ft)"],
+                  ["text", "Szöveges ár"],
+                ]}
+                onChange={(mode) =>
+                  update(i, {
+                    price_text: mode === "text" ? "" : undefined,
+                    price_minor: 0,
+                  })
+                }
+              />
+            )}
+            {allowTextPrice && line.price_text !== undefined ? (
+              <Text
+                label="Munkadíj szövegesen"
+                required
+                value={line.price_text}
+                onChange={(price_text) => update(i, { price_text })}
+              />
+            ) : (
+              <Amount
+                label="Egység munkadíja (Ft)"
+                value={line.price_minor}
+                onChange={(price_minor) =>
+                  update(i, { price_minor, price_text: undefined })
+                }
+              />
+            )}
           </div>
+          {!allowTextPrice && line.price_text !== undefined && (
+            <p className="notice">
+              Felmérésben megadott ár: {line.price_text || "nincs megadva"}. Az
+              ajánlathoz írj be számszerű munkadíjat.
+            </p>
+          )}
           <Text
             label="Elhelyezés / helyiség"
             value={line.location}
@@ -210,7 +245,11 @@ export function Lines({
           />
           <div className="row between">
             <small>{line.recipe.length} recepttétel pillanatfelvétele</small>
-            <strong>{formatMoney(lineTotal(line))}</strong>
+            <strong>
+              {line.price_text !== undefined
+                ? line.price_text || "Szöveges ár megadása szükséges"
+                : formatMoney(lineTotal(line))}
+            </strong>
           </div>
         </section>
       ))}
@@ -389,6 +428,7 @@ function SurveyEditor({
         <Lines
           ctx={ctx}
           value={p.whole_property}
+          allowTextPrice
           onChange={(whole_property) => patch({ whole_property })}
         />
         <h3>Helyiségek</h3>
@@ -499,6 +539,7 @@ function SurveyEditor({
               <Lines
                 ctx={ctx}
                 value={room.lines}
+                allowTextPrice
                 onChange={(lines) =>
                   patch({
                     rooms: p.rooms.map((r, n) =>
@@ -1011,7 +1052,10 @@ function QuoteEditor({
                 Végösszeg: <strong>{formatMoney(totals.gross)}</strong>
               </div>
             ) : (
-              <div className="notice error">Az összegek nem érvényesek.</div>
+              <div className="notice error">
+                Az összegek nem érvényesek. A felmérésből átvett szöveges árakat
+                az ajánlatban számszerű munkadíjra kell cserélni.
+              </div>
             )}
           </Form>
           <button
@@ -1019,6 +1063,7 @@ function QuoteEditor({
             disabled={
               action.busy ||
               !p.lines.length ||
+              !totals ||
               p.tax_mode === "unknown" ||
               !p.customer.address ||
               !p.company.address

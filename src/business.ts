@@ -17,6 +17,12 @@ export const lineSchema = z.object({
   unit: txt.min(1),
   quantity_milli: z.number().int().positive().max(1000000000),
   price_minor: amount,
+  price_text: z
+    .string()
+    .trim()
+    .min(1, "Add meg a szöveges árat.")
+    .max(500)
+    .optional(),
   location: txt,
   notes: txt,
   recipe: z.array(recipe).max(1000),
@@ -284,8 +290,15 @@ function safe(n: bigint): number {
     throw new Error("Az összeg meghaladja a megengedett határt.");
   return Number(n);
 }
-export const lineTotal = (line: WorkLine) =>
-  safe(round(BigInt(line.price_minor) * BigInt(line.quantity_milli), 1000n));
+export const lineTotal = (line: WorkLine) => {
+  if (line.price_text !== undefined)
+    throw new Error(
+      "A szöveges árú felmérési tételhez adj meg számszerű munkadíjat az ajánlatban.",
+    );
+  return safe(
+    round(BigInt(line.price_minor) * BigInt(line.quantity_milli), 1000n),
+  );
+};
 export function quoteTotals(q: PayloadOf<"quote">) {
   const labor = safe(q.lines.reduce((s, l) => s + BigInt(lineTotal(l)), 0n));
   const net =

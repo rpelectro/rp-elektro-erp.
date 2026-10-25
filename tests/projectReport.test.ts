@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { projectReportBlocks, type ReportBlock } from "../src/projectReport";
 import { type Snapshot, type Project } from "../src/domain";
 import { type PayloadOf } from "../src/business";
-import { entry, ids, invoice } from "./fixtures";
+import { entry, ids, invoice, line } from "./fixtures";
 
 const meta = {
   id: ids.project,
@@ -62,6 +62,17 @@ const text = (blocks: ReportBlock[]) =>
   blocks.flatMap((b) => ("text" in b ? [b.text] : [])).join("\n");
 
 describe("Projekt PDF tartalom", () => {
+  it("a felmérés szöveges árát exportálja, nem nullás munkadíjat", () => {
+    const blocks = projectReportBlocks(base, project, 1, {
+      ...survey,
+      whole_property: [
+        { ...line, price_minor: 0, price_text: "Helyszíni egyeztetés után" },
+      ],
+      rooms: [],
+    });
+    expect(text(blocks)).toContain("Munkadíj: Helyszíni egyeztetés után");
+    expect(text(blocks)).not.toContain("×");
+  });
   it("megőrzi a hosszú szöveget és a helyiségfotók sorrendjét, kizárja a belső jegyzeteket és más projekt adatait", () => {
     const other = {
       ...entry({ ...survey, name: "MÁS PROJEKT TITKOS" }),

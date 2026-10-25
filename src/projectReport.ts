@@ -53,7 +53,9 @@ export function projectReportBlocks(
         true,
       );
       text(
-        `${quantity(line.quantity_milli)} ${line.unit} × ${formatMoney(line.price_minor)} = ${formatMoney(lineTotal(line))}`,
+        line.price_text !== undefined
+          ? `${quantity(line.quantity_milli)} ${line.unit} · Munkadíj: ${line.price_text}`
+          : `${quantity(line.quantity_milli)} ${line.unit} × ${formatMoney(line.price_minor)} = ${formatMoney(lineTotal(line))}`,
       );
       if (line.notes) text(line.notes);
     }

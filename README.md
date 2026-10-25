@@ -70,6 +70,13 @@ A `public/_headers` Supabase- és workers.dev-címeket enged a kapcsolat számá
 
 ### Hosszú leírások és projekt-PDF
 
+A felmérés munkatételeinél az **Ár megadásának módja** mezőben számszerű összeg
+vagy **Szöveges ár** választható (például „Egyeztetés szerint”). Ez a teljes
+ingatlan és az egyes helyiségek munkáinál is használható, és a felmérés PDF-jében
+is megjelenik. Ajánlatba átemelés után a szöveges ár mellé számszerű munkadíjat
+kell beírni; addig az ajánlat nem menthető és nem véglegesíthető. A szöveges
+ár nem számít automatikusan 0 Ft-os tételnek.
+
 A többsoros leírásmezők a tartalmukkal együtt nőnek. A **Nagyobb szerkesztőnézet**
 gomb külön, közel teljes képernyős szerkesztőt nyit; a **Vissza az űrlaphoz** gomb
 vagy az Escape visszavisz az eredeti űrlapra. A módosításokat az űrlap **Mentés**

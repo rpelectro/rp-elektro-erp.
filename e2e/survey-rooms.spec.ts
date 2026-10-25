@@ -89,6 +89,19 @@ test("helyiségfotók, hosszú szöveg szerkesztése és projekt PDF-ek", async 
       })
       .click();
   }
+  await dialog
+    .getByRole("button", { name: "Tétel hozzáadása", exact: true })
+    .first()
+    .click();
+  await dialog
+    .getByLabel("Munka megnevezése", { exact: true })
+    .fill("Árazandó felmérési munka");
+  await dialog
+    .getByRole("combobox", { name: "Ár megadásának módja", exact: true })
+    .selectOption("text");
+  await dialog
+    .getByLabel("Munkadíj szövegesen", { exact: true })
+    .fill("Egyeztetés szerint");
   const png = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
     "base64",
@@ -130,6 +143,9 @@ test("helyiségfotók, hosszú szöveg szerkesztése és projekt PDF-ek", async 
     name: "Helyiség: Nappali",
     exact: true,
   });
+  await expect(
+    dialog.getByLabel("Munkadíj szövegesen", { exact: true }),
+  ).toHaveValue("Egyeztetés szerint");
   const kitchen = dialog.getByRole("region", {
     name: "Helyiség: Konyha",
     exact: true,
@@ -199,4 +215,24 @@ test("helyiségfotók, hosszú szöveg szerkesztése és projekt PDF-ek", async 
       (await PDFDocument.load(await readFile(path))).getPageCount(),
     ).toBeGreaterThan(0);
   }
+  await page
+    .locator(".project-tabs")
+    .getByRole("button", { name: "Árajánlat", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Új ajánlat", exact: true }).click();
+  await dialog
+    .getByRole("combobox", { name: "Felmérés kiválasztása", exact: true })
+    .selectOption({ label: "Helyiséges felmérés" });
+  await expect(
+    dialog.getByText("Felmérésben megadott ár:", { exact: false }),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Mentés", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("számszerű");
+  await dialog
+    .getByLabel("Egység munkadíja (Ft)", { exact: true })
+    .fill("3500");
+  await dialog.getByRole("button", { name: "Mentés", exact: true }).click();
+  await expect(
+    dialog.getByText("Ajánlattervezet elmentve.", { exact: true }),
+  ).toBeVisible();
 });

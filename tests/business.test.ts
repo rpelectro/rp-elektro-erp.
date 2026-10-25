@@ -13,6 +13,18 @@ import {
 import { budapestToIso } from "../src/Calendar";
 import { quote, invoice, line, entry, ids } from "./fixtures";
 describe("Munkafolyamat üzleti szabályai", () => {
+  it("a szöveges felmérési ár nem számolható nullaként az ajánlatba", () => {
+    const q = quote();
+    q.lines[0] = {
+      ...q.lines[0],
+      price_minor: 0,
+      price_text: "Egyeztetés szerint",
+    };
+    expect(() => quoteTotals(q)).toThrow("számszerű");
+    expect(() => lineTotal(q.lines[0])).toThrow("számszerű");
+    q.lines[0] = { ...q.lines[0], price_minor: 350000, price_text: undefined };
+    expect(quoteTotals(q).labor).toBe(525000);
+  });
   it("tételenként kerekít és az adót a pontos nettóból számolja", () => {
     expect(lineTotal(line)).toBe(185184);
     expect(quoteTotals(quote())).toEqual({

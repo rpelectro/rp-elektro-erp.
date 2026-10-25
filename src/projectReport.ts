@@ -18,7 +18,12 @@ export const reportTabs = [
   "Dokumentumok",
 ] as const;
 export type ReportBlock =
-  { text: string; heading?: boolean } | { photoId: string };
+  | {
+      text: string;
+      heading?: boolean;
+      role?: "title" | "subtitle" | "meta" | "section";
+    }
+  | { photoId: string };
 
 export function projectReportBlocks(
   data: Snapshot,
@@ -34,7 +39,7 @@ export function projectReportBlocks(
   const text = (text: string, heading = false) =>
     blocks.push({ text, heading });
   const field = (label: string, value: string | null | undefined) => {
-    text(label, true);
+    blocks.push({ text: label, heading: true, role: "section" });
     text(value?.trim() || "Nincs rögzítve.");
   };
   const photos = (ids: string[]) => {
@@ -53,12 +58,19 @@ export function projectReportBlocks(
       if (line.notes) text(line.notes);
     }
   };
-  text(`${reportTabs[tab]} – ${project.title}`, true);
-  text(`Vállalkozás: ${data.company.name}`);
-  text(
-    `Ügyfél: ${data.partners.find((p) => p.id === project.customer_id)?.name ?? "Nincs megadva"}`,
+  blocks.push(
+    { text: reportTabs[tab], role: "title" },
+    { text: project.title, role: "subtitle" },
   );
-  text(`Munkavégzés helye: ${project.site_address || "Nincs megadva"}`);
+  blocks.push({ text: `Vállalkozás: ${data.company.name}`, role: "meta" });
+  blocks.push({
+    text: `Ügyfél: ${data.partners.find((p) => p.id === project.customer_id)?.name ?? "Nincs megadva"}`,
+    role: "meta",
+  });
+  blocks.push({
+    text: `Munkavégzés helye: ${project.site_address || "Nincs megadva"}`,
+    role: "meta",
+  });
   if (tab !== 1)
     text(
       "Projektadatok kivonata. Nem helyettesíti az eredeti számlát vagy a végleges, aláírt dokumentumot.",

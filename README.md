@@ -80,7 +80,9 @@ A felmérés listájában egyenként, a szerkesztőjében pedig az aktuális űr
 is készíthető PDF. A hosszú szövegek több oldalra tördelődnek, a helyiségfotók a
 saját helyiségük alatt szerepelnek. A belső felmérésjegyzet és a projekt belső
 megjegyzése nem kerül az exportba. A Markdownból bemásolt `#` címsorok PDF-ben
-címsorként jelennek meg.
+címsorként jelennek meg. A projekt-PDF külön főcímet, projektadat-blokkot,
+ismétlődő fejlécet és oldal/összes oldal számozást kap. A szöveg szóhatáron
+tördelődik; a `**félkövér**` kiemelés és a felsorolások is formázva jelennek meg.
 
 Az új export letölthető kivonat; nem küldi ki és nem archiválja automatikusan a
 dokumentumot. A számlafül exportja számlanyilvántartás, nem új számla. Az ajánlat és

@@ -77,10 +77,18 @@ is megjelenik. Ajánlatba átemelés után a szöveges ár mellé számszerű mu
 kell beírni; addig az ajánlat nem menthető és nem véglegesíthető. A szöveges
 ár nem számít automatikusan 0 Ft-os tételnek.
 
-A többsoros leírásmezők a tartalmukkal együtt nőnek. A **Nagyobb szerkesztőnézet**
-gomb külön, közel teljes képernyős szerkesztőt nyit; a **Vissza az űrlaphoz** gomb
-vagy az Escape visszavisz az eredeti űrlapra. A módosításokat az űrlap **Mentés**
-gombja rögzíti, a nagy nézet bezárása önmagában nem ment az adatbázisba.
+A felmérés önálló, teljes oldalas munkaterületen nyílik meg. Balra az alapadatok,
+leírások, ingatlanmunkák, általános fotók és az egyes helyiségek választhatók;
+telefonon ugyanez legördülő listaként jelenik meg. A leírások külön füleket kapnak,
+egyszerre egy nagy, belül görgethető szerkesztővel. A meglévő hosszú szöveg rögtön
+görgethető, fülváltáskor megmarad a tartalom és a görgetési hely. A keresővel és az
+Előző/Következő találat gombokkal a hosszú leírásban is lehet navigálni.
+
+A fejlécben mindig elérhető a **Mentés**, **PDF letöltése** és **Vissza a projekthez**.
+A mentés a munkaterületen tart, a következő mentés az új verziót használja.
+A részek közötti váltás nem dobja el a módosításokat. Mentetlen felmérés
+elhagyásakor megerősítést kér. A felmérés leírásaihoz nem nyílik felugró ablak.
+Más űrlapok hosszú szövegeinél továbbra is használható a Nagyobb szerkesztőnézet.
 
 A projekt minden fülén van **PDF letöltése** gomb az adott fül mentett adataihoz.
 A felmérés listájában egyenként, a szerkesztőjében pedig az aktuális űrlaptartalomból

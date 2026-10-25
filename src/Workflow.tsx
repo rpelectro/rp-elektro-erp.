@@ -33,7 +33,7 @@ import {
 } from "./business";
 import { Invoices } from "./Invoices";
 import { PhotoPreview } from "./PhotoPreview";
-import { RoomPhotos } from "./RoomPhotos";
+import { SurveyWorkspace } from "./SurveyWorkspace";
 import { ReportButton } from "./ReportButton";
 const tabs = [
   "Áttekintés",
@@ -54,6 +54,18 @@ export function ProjectModules({
   children: ReactNode;
 }) {
   const [tab, setTab] = useState(0);
+  const [surveyEdit, setSurveyEdit] = useState<Entry | null | undefined>();
+  if (surveyEdit !== undefined)
+    return (
+      <SurveyWorkspace
+        ctx={ctx}
+        entry={surveyEdit ?? undefined}
+        onClose={() => setSurveyEdit(undefined)}
+        renderLines={(value, onChange) => (
+          <Lines ctx={ctx} value={value} onChange={onChange} allowTextPrice />
+        )}
+      />
+    );
   return (
     <>
       <div className="tabs project-tabs">
@@ -77,7 +89,7 @@ export function ProjectModules({
           {children}
         </>
       ) : tab === 1 ? (
-        <Surveys ctx={ctx} />
+        <Surveys ctx={ctx} onEdit={setSurveyEdit} />
       ) : tab === 2 ? (
         <Quotes ctx={ctx} project={project} />
       ) : tab === 3 ? (
@@ -275,8 +287,13 @@ export function Lines({
     </div>
   );
 }
-function Surveys({ ctx }: { ctx: Context }) {
-  const [edit, setEdit] = useState<Entry | null | undefined>();
+function Surveys({
+  ctx,
+  onEdit,
+}: {
+  ctx: Context;
+  onEdit: (entry: Entry | null) => void;
+}) {
   const action = useAction();
   const surveys = entries(ctx, "survey");
   return (
@@ -284,7 +301,7 @@ function Surveys({ ctx }: { ctx: Context }) {
       {action.feedback}
       <div className="section-heading">
         <h2>Felmérések</h2>
-        <button className="primary" onClick={() => setEdit(null)}>
+        <button className="primary" onClick={() => onEdit(null)}>
           Új felmérés
         </button>
       </div>
@@ -301,7 +318,7 @@ function Surveys({ ctx }: { ctx: Context }) {
               </div>
               <div className="row">
                 <ReportButton ctx={ctx} tab={1} survey={e.payload} />
-                <button className="secondary" onClick={() => setEdit(e)}>
+                <button className="secondary" onClick={() => onEdit(e)}>
                   Megnyitás
                 </button>
               </div>
@@ -313,367 +330,7 @@ function Surveys({ ctx }: { ctx: Context }) {
           Kis munkánál felmérés nélkül is készíthetsz ajánlatot.
         </p>
       )}
-      {edit !== undefined && (
-        <SurveyEditor
-          key={edit?.id ?? "new"}
-          ctx={ctx}
-          entry={edit ?? undefined}
-          onClose={() => setEdit(undefined)}
-        />
-      )}
     </section>
-  );
-}
-function SurveyEditor({
-  ctx,
-  entry,
-  onClose,
-}: {
-  ctx: Context;
-  entry?: Entry;
-  onClose: () => void;
-}) {
-  const [p, set] = useState<PayloadOf<"survey">>(
-    (entry?.payload as PayloadOf<"survey">) ?? {
-      type: "survey",
-      name: "",
-      surveyed_on: today(),
-      existing: "",
-      planned: "",
-      unknown: "",
-      internal_notes: "",
-      rooms: [],
-      whole_property: [],
-      photo_ids: [],
-    },
-  );
-  const [dirty, mark] = useState(false);
-  const [uploadBusy, setUploadBusy] = useState(false);
-  const [roomPreset, setRoomPreset] = useState("Nappali");
-  const action = useAction();
-  const patch = (v: Partial<typeof p>) => {
-    mark(true);
-    set((previous) => ({ ...previous, ...v }));
-  };
-  return (
-    <Modal
-      title="Felmérés"
-      onClose={() => {
-        if (!uploadBusy) onClose();
-      }}
-      dirty={dirty}
-    >
-      {action.feedback}
-      <div className="report-toolbar">
-        <span>
-          PDF a jelenlegi űrlaptartalomból. A belső megjegyzés kimarad.
-        </span>
-        <ReportButton
-          ctx={ctx}
-          tab={1}
-          survey={p}
-          disabled={uploadBusy || action.busy}
-        />
-      </div>
-      <Form
-        busy={action.busy || uploadBusy}
-        onSave={() =>
-          !uploadBusy &&
-          void action.act(async () => {
-            await saveEntry(ctx, p, entry);
-            await ctx.reload();
-            mark(false);
-            onClose();
-          })
-        }
-      >
-        <Text
-          label="Felmérés neve"
-          required
-          value={p.name}
-          onChange={(name) => patch({ name })}
-        />
-        <Text
-          label="Felmérés dátuma"
-          type="date"
-          required
-          value={p.surveyed_on}
-          onChange={(surveyed_on) => patch({ surveyed_on })}
-        />
-        <Text
-          label="Meglévő állapot"
-          rows={3}
-          value={p.existing}
-          onChange={(existing) => patch({ existing })}
-        />
-        <Text
-          label="Tervezett munka"
-          rows={3}
-          value={p.planned}
-          onChange={(planned) => patch({ planned })}
-        />
-        <Text
-          label="Ismeretlen / nem vizsgált adatok"
-          rows={2}
-          value={p.unknown}
-          onChange={(unknown) => patch({ unknown })}
-        />
-        <Text
-          label="Belső megjegyzés – nem kerül az ügyfél PDF-jére"
-          rows={2}
-          value={p.internal_notes}
-          onChange={(internal_notes) => patch({ internal_notes })}
-        />
-        <h3>Teljes ingatlanra vonatkozó munkák</h3>
-        <Lines
-          ctx={ctx}
-          value={p.whole_property}
-          allowTextPrice
-          onChange={(whole_property) => patch({ whole_property })}
-        />
-        <h3>Helyiségek</h3>
-        <div className="row">
-          <Select
-            label="Választható helyiség"
-            value={roomPreset}
-            onChange={setRoomPreset}
-            options={[
-              "Nappali",
-              "Konyha",
-              "Étkező",
-              "Hálószoba",
-              "Gyerekszoba",
-              "Fürdőszoba",
-              "WC",
-              "Előszoba",
-              "Folyosó",
-              "Dolgozószoba",
-              "Kamra",
-              "Háztartási helyiség",
-              "Garázs",
-              "Pince",
-              "Padlás",
-              "Terasz",
-              "Kert",
-            ].map((name) => [name, name])}
-          />
-          <button
-            type="button"
-            className="secondary"
-            disabled={uploadBusy}
-            onClick={() => {
-              const count = p.rooms.filter(
-                (r) =>
-                  r.name === roomPreset || r.name.startsWith(`${roomPreset} `),
-              ).length;
-              patch({
-                rooms: [
-                  ...p.rooms,
-                  {
-                    id: crypto.randomUUID(),
-                    name: count ? `${roomPreset} ${count + 1}` : roomPreset,
-                    existing: "",
-                    planned: "",
-                    lines: [],
-                    photo_ids: [],
-                  },
-                ],
-              });
-            }}
-          >
-            Kiválasztott helyiség hozzáadása
-          </button>
-        </div>
-        {p.rooms.map((room, i) => (
-          <section
-            className="line-card"
-            key={room.id}
-            aria-label={`Helyiség: ${room.name || "Névtelen"}`}
-          >
-            <CollapsibleRoom
-              name={room.name}
-              lines={room.lines.length}
-              photos={room.photo_ids?.length ?? 0}
-              initiallyOpen={
-                !entry ||
-                (entry.payload.type === "survey" &&
-                  !entry.payload.rooms.some((r) => r.id === room.id))
-              }
-            >
-              <Text
-                label="Helyiség neve"
-                required
-                value={room.name}
-                onChange={(name) =>
-                  patch({
-                    rooms: p.rooms.map((r, n) =>
-                      n === i ? { ...r, name } : r,
-                    ),
-                  })
-                }
-              />
-              <Text
-                label="Helyiség meglévő állapota"
-                rows={2}
-                value={room.existing}
-                onChange={(existing) =>
-                  patch({
-                    rooms: p.rooms.map((r, n) =>
-                      n === i ? { ...r, existing } : r,
-                    ),
-                  })
-                }
-              />
-              <Text
-                label="Helyiség tervezett munkája"
-                rows={2}
-                value={room.planned}
-                onChange={(planned) =>
-                  patch({
-                    rooms: p.rooms.map((r, n) =>
-                      n === i ? { ...r, planned } : r,
-                    ),
-                  })
-                }
-              />
-              <Lines
-                ctx={ctx}
-                value={room.lines}
-                allowTextPrice
-                onChange={(lines) =>
-                  patch({
-                    rooms: p.rooms.map((r, n) =>
-                      n === i ? { ...r, lines } : r,
-                    ),
-                  })
-                }
-              />
-              <button
-                type="button"
-                className="text-button"
-                disabled={uploadBusy}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      "Eltávolítod a helyiséget a munkáival és fotó-hozzárendeléseivel? Az eredeti képek megmaradnak a Dokumentumok között.",
-                    )
-                  )
-                    patch({ rooms: p.rooms.filter((_, n) => n !== i) });
-                }}
-              >
-                Helyiség eltávolítása
-              </button>
-              <RoomPhotos
-                ctx={ctx}
-                name={room.name}
-                ids={room.photo_ids ?? []}
-                entityId={entry?.id}
-                onBusy={setUploadBusy}
-                locked={uploadBusy || action.busy}
-                onAdd={(id) => {
-                  mark(true);
-                  set((previous) => ({
-                    ...previous,
-                    rooms: previous.rooms.map((r) =>
-                      r.id === room.id
-                        ? {
-                            ...r,
-                            photo_ids: [
-                              ...new Set([...(r.photo_ids ?? []), id]),
-                            ],
-                          }
-                        : r,
-                    ),
-                  }));
-                }}
-                onRemove={(id) =>
-                  patch({
-                    rooms: p.rooms.map((r) =>
-                      r.id === room.id
-                        ? {
-                            ...r,
-                            photo_ids: (r.photo_ids ?? []).filter(
-                              (photo) => photo !== id,
-                            ),
-                          }
-                        : r,
-                    ),
-                  })
-                }
-              />
-            </CollapsibleRoom>
-          </section>
-        ))}
-        <button
-          type="button"
-          className="secondary"
-          onClick={() =>
-            patch({
-              rooms: [
-                ...p.rooms,
-                {
-                  id: crypto.randomUUID(),
-                  name: "",
-                  existing: "",
-                  planned: "",
-                  lines: [],
-                  photo_ids: [],
-                },
-              ],
-            })
-          }
-        >
-          Helyiség hozzáadása
-        </button>
-        <h3 className="space-top">
-          Teljes ingatlan / korábbi felmérés fényképei
-        </h3>
-        <p>
-          A szobák képeit fent, közvetlenül a helyiségnél töltsd fel. Itt a
-          helyiséghez nem rendelt, általános képeket választhatod ki.
-        </p>
-        <PhotoPicker
-          ctx={ctx}
-          value={p.photo_ids}
-          excluded={p.rooms
-            .flatMap((room) => room.photo_ids ?? [])
-            .filter((id) => !p.photo_ids.includes(id))}
-          onChange={(photo_ids) => patch({ photo_ids })}
-        />
-      </Form>
-      <Upload ctx={ctx} category="photo" entityId={entry?.id} />
-    </Modal>
-  );
-}
-function CollapsibleRoom({
-  name,
-  lines,
-  photos,
-  initiallyOpen,
-  children,
-}: {
-  name: string;
-  lines: number;
-  photos: number;
-  initiallyOpen: boolean;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(initiallyOpen);
-  return (
-    <details
-      className="survey-room"
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-      onInvalidCapture={() => setOpen(true)}
-    >
-      <summary>
-        <strong>{name || "Új helyiség"}</strong>
-        <span className="small muted">
-          {lines} munkatétel · {photos} kép
-        </span>
-      </summary>
-      <div className="survey-room-content">{children}</div>
-    </details>
   );
 }
 function PhotoPicker({

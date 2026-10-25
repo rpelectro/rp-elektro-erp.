@@ -405,3 +405,204 @@ pre {
   font-weight: 600;
   margin: 0 0 12px;
 }
+.content:has(.survey-workspace) > .page-heading,
+.content:has(.survey-workspace) .project-actions {
+  display: none;
+}
+.survey-workspace {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.survey-workspace [hidden] {
+  display: none !important;
+}
+.survey-workspace input,
+.survey-workspace textarea {
+  scroll-margin-top: 180px;
+}
+.survey-workspace-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  padding: 16px 20px;
+  border-radius: 10px 10px 0 0;
+}
+.survey-workspace-header h1 {
+  font-size: 20px;
+  margin: 8px 0 0;
+}
+.survey-workspace-header .row {
+  flex-wrap: wrap;
+}
+.survey-workspace-header .notice {
+  max-width: 420px;
+}
+.survey-unsaved {
+  color: #8a6100;
+  font-size: 12px;
+}
+.survey-workspace-grid {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  min-height: 70vh;
+}
+.survey-section-nav {
+  position: sticky;
+  top: 100px;
+  align-self: start;
+  max-height: calc(100dvh - 130px);
+  overflow-y: auto;
+  padding: 18px 12px;
+  border-right: 1px solid var(--line);
+  background: #fafbfc;
+}
+.survey-section-nav > strong,
+.survey-nav-rooms {
+  display: block;
+  font-size: 12px;
+  color: #64717d;
+  padding: 8px;
+}
+.survey-section-nav button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  margin-bottom: 4px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.survey-section-nav button.active {
+  background: #fff1be;
+  color: #5c4300;
+  box-shadow: inset 3px 0 #e9b62e;
+}
+.survey-section-nav button small {
+  display: block;
+  color: #64717d;
+  margin-top: 4px;
+}
+.survey-workspace-main {
+  min-width: 0;
+  padding: 24px;
+}
+.survey-workspace-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.survey-workspace-main h2 {
+  margin: 0 0 20px;
+  font-size: 20px;
+}
+.survey-text-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+.survey-text-tabs button {
+  border: 1px solid var(--line);
+  background: #f7f8fa;
+  border-radius: 5px 5px 0 0;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+.survey-text-tabs button[aria-selected="true"] {
+  background: #fff1be;
+  border-color: #e9b62e;
+  color: #5c4300;
+}
+.survey-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.survey-search label {
+  flex: 1;
+  min-width: 160px;
+  margin: 0;
+}
+.survey-search button {
+  padding: 10px;
+  font-size: 12px;
+}
+.survey-editor-label {
+  margin-bottom: 0;
+}
+textarea.survey-editor-text {
+  display: block;
+  height: clamp(300px, 55dvh, 650px);
+  min-height: 300px;
+  overflow-y: scroll;
+  resize: vertical;
+  line-height: 1.7;
+  font-size: 15px;
+  padding: 16px;
+  scrollbar-gutter: stable;
+}
+.survey-editor-hint {
+  padding-top: 8px;
+  margin-bottom: 20px;
+}
+.survey-mobile-nav {
+  display: none;
+}
+@media (max-width: 850px) {
+  .survey-workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .survey-section-nav {
+    display: none;
+  }
+  .survey-mobile-nav {
+    display: block;
+    padding: 12px 16px 0;
+  }
+  .survey-mobile-nav label {
+    margin: 0;
+  }
+  .survey-workspace-main {
+    padding: 16px;
+  }
+  .survey-workspace-header {
+    padding: 12px 16px;
+  }
+  .survey-workspace-header h1 {
+    font-size: 16px;
+  }
+  .survey-workspace-header {
+    gap: 10px;
+  }
+  .survey-workspace-header > .row {
+    width: 100%;
+    gap: 8px;
+  }
+  .survey-workspace-header > .row > span {
+    flex-basis: 100%;
+    font-size: 11px;
+  }
+  .survey-workspace-header button {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .survey-text-tabs button {
+    flex: 1 1 40%;
+  }
+}

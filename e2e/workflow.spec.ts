@@ -81,22 +81,51 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
   await page.context().setOffline(true);
   await page.getByRole("button", { name: "Felmérés", exact: true }).click();
   await page.getByRole("button", { name: "Új felmérés" }).click();
-  await dialog().getByLabel("Felmérés neve").fill("Helyszíni felmérés");
-  await dialog()
-    .getByLabel("Meglévő állapot", { exact: true })
+  const survey = page.getByRole("region", {
+    name: "Felmérés szerkesztése",
+    exact: true,
+  });
+  const surveyNav = survey.getByRole("navigation", { name: "Felmérés részei" });
+  await survey.getByLabel("Felmérés neve").fill("Helyszíni felmérés");
+  await surveyNav
+    .getByRole("button", { name: "Leírások", exact: true })
+    .click();
+  await survey
+    .getByRole("textbox", { name: "Meglévő állapot", exact: true })
     .fill("Alumínium vezeték; helyiségenként felmérve.");
-  await dialog()
+  await survey
+    .getByRole("tab", { name: "Belső megjegyzés", exact: true })
+    .click();
+  await survey
     .getByLabel("Belső megjegyzés – nem kerül az ügyfél PDF-jére")
     .fill("EZ-TITKOS-BELSO-MEGJEGYZES");
-  await dialog()
+  await surveyNav
+    .getByRole("button", { name: "Teljes ingatlan munkái", exact: true })
+    .click();
+  await survey
+    .locator('[data-survey-section="property"]')
     .getByRole("combobox", { name: "Munkakatalógusból" })
     .selectOption({ label: "Dugalj szerelés" });
-  await dialog().getByRole("button", { name: "Tétel hozzáadása" }).click();
-  await dialog().getByLabel("Mennyiség", { exact: true }).fill("2");
-  await dialog().getByRole("button", { name: "Helyiség hozzáadása", exact: true }).click();
-  await dialog().getByLabel("Helyiség neve").fill("Konyha");
-  await dialog().getByRole("button", { name: "Mentés", exact: true }).click();
-  await expect(dialog()).not.toBeVisible();
+  await survey
+    .locator('[data-survey-section="property"]')
+    .getByRole("button", { name: "Tétel hozzáadása" })
+    .click();
+  await survey.getByLabel("Mennyiség", { exact: true }).fill("2");
+  await surveyNav
+    .getByRole("button", { name: "+ Helyiség hozzáadása", exact: true })
+    .click();
+  await survey
+    .getByRole("button", { name: "Egyedi helyiség hozzáadása", exact: true })
+    .click();
+  await survey.getByLabel("Helyiség neve").fill("Konyha");
+  await survey.getByRole("button", { name: "Mentés", exact: true }).click();
+  await expect(
+    survey.getByText("Felmérés elmentve.", { exact: true }),
+  ).toBeVisible();
+  await survey
+    .getByRole("button", { name: "← Vissza a projekthez", exact: true })
+    .click();
+  await expect(survey).not.toBeVisible();
   await page.getByRole("button", { name: "Árajánlat", exact: true }).click();
   await page.getByRole("button", { name: "Új ajánlat", exact: true }).click();
   await dialog()

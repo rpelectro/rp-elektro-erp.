@@ -81,4 +81,39 @@ test("az 50 alapmunka egyszerre menthető és ismétléskor nem duplikálódik",
   await expect(
     page.getByText("50 új tétel, 0 meglévő tétel kihagyva.", { exact: true }),
   ).toBeVisible();
+  await page.getByLabel("CSV-fájl feltöltése").setInputFiles({
+    name: "munkakatalogus.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      '\uFEFFMegnevezés;Egység;Egységár;Kategória;Leírás\r\nÁramkör kialakítása;db;12500;Vezetékezés;"Védőcső; vezeték\r\nBekötés és ellenőrzés"',
+      "utf8",
+    ),
+  });
+  await expect(
+    page.getByText("1 új tétel, 0 meglévő tétel kihagyva.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Védőcső; vezeték\nBekötés és ellenőrzés", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "1 munkatétel mentése", exact: true })
+    .click();
+  await expect(page.locator(".table-panel tbody tr")).toHaveCount(1);
+  await expect(page.locator(".table-panel tbody tr")).toContainText(
+    "Áramkör kialakítása",
+  );
+  await expect(page.locator(".table-panel tbody tr")).toContainText(
+    "Vezetékezés",
+  );
+  await page.reload();
+  await page.getByRole("button", { name: "Helyi próbamód megnyitása" }).click();
+  await page
+    .getByLabel("Helyi jelszó", { exact: true })
+    .fill("Katalogus-proba-2026");
+  await page.getByRole("button", { name: "Megnyitás", exact: true }).click();
+  await page.getByRole("button", { name: "Beállítások", exact: true }).click();
+  await expect(page.locator(".table-panel tbody tr")).toHaveCount(1);
+  await expect(page.locator(".table-panel tbody tr")).toContainText(
+    "Áramkör kialakítása",
+  );
 });

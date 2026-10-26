@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { friendly, formatMoney, type WorkData } from "./domain";
-import { basicCatalog, catalogKey, parseCatalog } from "./catalogImport";
+import {
+  basicCatalog,
+  catalogKey,
+  parseCatalog,
+  decodeCatalogFile,
+} from "./catalogImport";
 import { type Context } from "./ui";
 
 export function CatalogImport({ repo, data, reload }: Context) {
@@ -10,9 +15,11 @@ export function CatalogImport({ repo, data, reload }: Context) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [fileName, setFileName] = useState("");
   const existing = new Set(data.work_items.map(catalogKey));
   const pending = rows.filter((row) => !existing.has(catalogKey(row)));
   function edit(value: string) {
+    setFileName("");
     setText(value);
     setRows([]);
     setError("");
@@ -38,6 +45,7 @@ export function CatalogImport({ repo, data, reload }: Context) {
       );
       setRows([]);
       setText("");
+      setFileName("");
     } catch (e) {
       setMessage("");
       setError(
@@ -64,10 +72,52 @@ export function CatalogImport({ repo, data, reload }: Context) {
       {open && (
         <>
           <p>
-            Másolj be Excelből, vagy használj pontosvesszővel elválasztott
-            sorokat: név; egység; munkadíj (Ft); kategória; leírás. Az utolsó
-            három oszlop elhagyható.
+            Válassz CSV-fájlt, vagy másolj be Excelből. Az oszlopsorrend:
+            megnevezés; egység; egységár (Ft); kategória; leírás. Az utolsó
+            három oszlop elhagyható. Legfeljebb 500 tétel, 2 MB. Excelben a
+            munkatételeket tartalmazó munkalapot mentsd „CSV UTF-8” formátumban.
           </p>
+          <label style={{ display: "block", marginBottom: "1rem" }}>
+            CSV-fájl feltöltése
+            <input
+              type="file"
+              accept=".csv,.tsv,text/csv,text/tab-separated-values"
+              disabled={busy}
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                setBusy(true);
+                edit("");
+                try {
+                  if (!/\.(csv|tsv)$/i.test(file.name))
+                    throw new Error(
+                      "CSV-fájlt válassz. Az Excel-fájlt előbb mentsd CSV UTF-8 formátumban.",
+                    );
+                  if (file.size > 2 * 1024 * 1024)
+                    throw new Error(
+                      "Legfeljebb 2 MB-os CSV-fájl tölthető fel.",
+                    );
+                  const content = decodeCatalogFile(
+                    new Uint8Array(await file.arrayBuffer()),
+                  );
+                  setText(content);
+                  setFileName(file.name);
+                  setRows(parseCatalog(content));
+                } catch (e) {
+                  setError(friendly(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
+          </label>
+          {fileName && (
+            <p>
+              Beolvasott fájl: <strong>{fileName}</strong>. Ellenőrizd az
+              előnézetet, majd kattints a mentésre.
+            </p>
+          )}
           <p>
             A hiányzó munkadíj 0 Ft lesz; ajánlatkészítés előtt add meg az
             áraidat. Az azonos nevű és egységű meglévő tételeket, az
@@ -119,6 +169,8 @@ export function CatalogImport({ repo, data, reload }: Context) {
                       <th>Név</th>
                       <th>Egység</th>
                       <th>Munkadíj</th>
+                      <th>Kategória</th>
+                      <th>Leírás</th>
                       <th>Állapot</th>
                     </tr>
                   </thead>
@@ -128,6 +180,10 @@ export function CatalogImport({ repo, data, reload }: Context) {
                         <td>{row.name}</td>
                         <td>{row.unit}</td>
                         <td>{formatMoney(row.price_minor)}</td>
+                        <td>{row.category || "—"}</td>
+                        <td style={{ whiteSpace: "pre-wrap", minWidth: 240 }}>
+                          {row.description || "—"}
+                        </td>
                         <td>
                           {existing.has(catalogKey(row)) ? "Kihagyva" : "Új"}
                         </td>

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { basicCatalog, catalogKey, parseCatalog } from "../src/catalogImport";
+import {
+  basicCatalog,
+  catalogKey,
+  parseCatalog,
+  decodeCatalogFile,
+} from "../src/catalogImport";
 
 describe("Munkakatalógus tömeges bevitele", () => {
   it("az 50 alapmunkát árazás nélküli tételekként olvassa be", () => {
@@ -43,4 +48,43 @@ describe("Munkakatalógus tömeges bevitele", () => {
       ),
     ).toThrow("500");
   });
+});
+
+it("CSV-fájlban idézőjelek, elválasztók és többsoros leírás is megmarad", () => {
+  const csv =
+    '\uFEFFMegnevezés;Egység;Egységár;Kategória;Leírás\r\n"Dugalj, kapcsoló";db;"3 500,50";Szerelvényezés;"Első sor; részlet\r\nMásodik sor: ""süllyesztett"" kivitel"';
+  expect(parseCatalog(csv)).toEqual([
+    expect.objectContaining({
+      name: "Dugalj, kapcsoló",
+      price_minor: 350050,
+      category: "Szerelvényezés",
+      description: 'Első sor; részlet\nMásodik sor: "süllyesztett" kivitel',
+    }),
+  ]);
+});
+it("vesszős CSV és Excel sep= jelölés is használható", () => {
+  expect(
+    parseCatalog(
+      'Megnevezés,Egység,Egységár,Kategória,Leírás\nMunka,db,"1250,50",Teszt,"Leírás, vesszővel"',
+    )[0],
+  ).toMatchObject({ price_minor: 125050, description: "Leírás, vesszővel" });
+  expect(
+    parseCatalog("sep=;\r\nMunka;db;100;Teszt;Leírás")[0].price_minor,
+  ).toBe(10000);
+});
+it.each([
+  'Munka;db;100;Teszt;"Lezáratlan',
+  'Munka;db;100;Teszt;"Leírás"szöveg',
+])("hibás CSV-nél nem importál részlegesen: %s", (csv) => {
+  expect(() => parseCatalog(csv)).toThrow("sor");
+});
+it("UTF-8, régebbi magyar Windows és UTF-16 kódolást olvas, túl nagy fájlt elutasít", () => {
+  expect(decodeCatalogFile(new TextEncoder().encode("Árvíztűrő"))).toBe(
+    "Árvíztűrő",
+  );
+  expect(decodeCatalogFile(new Uint8Array([0xf5, 0xfb]))).toBe("őű");
+  expect(decodeCatalogFile(new Uint8Array([0xff, 0xfe, 0x51, 0x01]))).toBe("ő");
+  expect(() => decodeCatalogFile(new Uint8Array(2 * 1024 * 1024 + 1))).toThrow(
+    "2 MB",
+  );
 });

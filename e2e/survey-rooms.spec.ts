@@ -331,8 +331,10 @@ test("teljes oldalas felmérés: fülek, keresés, mentés, fotók, mobil és PD
     .getByRole("button", { name: "Munkatételek", exact: true })
     .click();
   await dialog
-    .getByRole("combobox", { name: "Felmérés kiválasztása", exact: true })
+    .getByRole("combobox", { name: "Tételek forrása", exact: true })
     .selectOption({ label: "Helyiséges felmérés" });
+  await dialog.getByRole("button", { name: "Találatok kijelölése" }).click();
+  await dialog.getByRole("button", { name: "Kijelöltek hozzáadása" }).click();
   await dialog.getByRole("button", { name: "Mentés", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText("számszerű");
   await dialog

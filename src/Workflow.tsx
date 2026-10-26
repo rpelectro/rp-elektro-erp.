@@ -37,6 +37,7 @@ import { ReportButton } from "./ReportButton";
 import { RecordWorkspace, WorkspaceSection } from "./RecordWorkspace";
 import { SurveyTextEditor } from "./SurveyTextEditor";
 import { FormattedText } from "./FormattedText";
+import { QuoteWorkPicker } from "./QuoteWorkPicker";
 const tabs = [
   "Áttekintés",
   "Felmérés",
@@ -691,40 +692,11 @@ function QuoteEditor({
               )}
             </WorkspaceSection>
             <WorkspaceSection id="items" title="Munkatételek">
-              <h3>Tételek felmérésből</h3>
-              <select
-                aria-label="Felmérés kiválasztása"
-                defaultValue=""
-                onChange={(e) => {
-                  const s = ctx.data.entries.find(
-                    (s) => s.id === e.target.value,
-                  )?.payload as PayloadOf<"survey"> | undefined;
-                  if (s)
-                    patch({
-                      lines: [
-                        ...p.lines,
-                        ...structuredClone([
-                          ...s.whole_property,
-                          ...s.rooms.flatMap((r) =>
-                            r.lines.map((l) => ({
-                              ...l,
-                              location:
-                                r.name + (l.location ? " / " + l.location : ""),
-                            })),
-                          ),
-                        ]).map((l) => ({ ...l, id: crypto.randomUUID() })),
-                      ],
-                    });
-                  e.target.value = "";
-                }}
-              >
-                <option value="">Felmérés tételeinek hozzáadása…</option>
-                {entries(ctx, "survey").map((s) => (
-                  <option value={s.id} key={s.id}>
-                    {(s.payload as PayloadOf<"survey">).name}
-                  </option>
-                ))}
-              </select>
+              <QuoteWorkPicker
+                ctx={ctx}
+                onAdd={(lines) => patch({ lines: [...p.lines, ...lines] })}
+              />
+              <h3>Az ajánlat munkatételei</h3>
               <Lines
                 ctx={ctx}
                 value={p.lines}

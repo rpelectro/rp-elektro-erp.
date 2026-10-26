@@ -137,8 +137,10 @@ test("teljes munka: felmérés, magyar PDF-ajánlat, anyagigény, aláírt átad
   await page.getByRole("button", { name: "Új ajánlat", exact: true }).click();
   await section("Munkatételek");
   await dialog()
-    .getByRole("combobox", { name: "Felmérés kiválasztása" })
+    .getByRole("combobox", { name: "Tételek forrása" })
     .selectOption({ label: "Helyszíni felmérés" });
+  await dialog().getByRole("button", { name: "Találatok kijelölése" }).click();
+  await dialog().getByRole("button", { name: "Kijelöltek hozzáadása" }).click();
   await section("Alapadatok");
   await dialog().getByLabel("Érvényesség", { exact: true }).fill("2026-12-31");
   await section("Vállalási feltételek");

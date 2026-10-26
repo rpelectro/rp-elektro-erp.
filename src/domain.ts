@@ -91,6 +91,7 @@ export interface Repository {
     id?: string,
     expectedVersion?: number,
   ): Promise<Tables[K]>;
+  deleteWorkItems?(items: { id: string; version: number }[]): Promise<void>;
   close(): void;
   putFile(bytes: Uint8Array, mime: string): Promise<string>;
   getFile(key: string): Promise<Uint8Array>;

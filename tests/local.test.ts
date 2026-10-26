@@ -18,6 +18,38 @@ beforeEach(async () => {
   });
 });
 describe("Titkosított helyi adattár", () => {
+  it("a munkatörlés atomi, elavult verziónál semmit nem töröl, és az ügyfelek megmaradnak", async () => {
+    const repo = await openLocal(password, true);
+    const customerRecord = await repo.save("partners", customer);
+    const work = {
+      name: "Próba munka",
+      unit: "db",
+      category: "",
+      description: "",
+      price_minor: 0,
+      archived: false,
+    };
+    const first = await repo.save("work_items", work);
+    const second = await repo.save("work_items", {
+      ...work,
+      name: "Másik",
+      archived: true,
+    });
+    await expect(
+      repo.deleteWorkItems!([
+        { id: first.id, version: first.version },
+        { id: second.id, version: 999 },
+      ]),
+    ).rejects.toThrow(ConflictError);
+    expect((await repo.load()).work_items).toHaveLength(2);
+    await repo.deleteWorkItems!([first, second]);
+    const snapshot = await repo.load();
+    expect(snapshot.work_items).toHaveLength(0);
+    expect(snapshot.partners[0].id).toBe(customerRecord.id);
+    const replacement = await repo.save("work_items", work);
+    expect(replacement.id).not.toBe(first.id);
+    repo.close();
+  });
   it("létrehoz, ment, bezárás után visszaolvas és hibás jelszót elutasít", async () => {
     expect(await localExists()).toBe(false);
     const repo = await openLocal(password, true);

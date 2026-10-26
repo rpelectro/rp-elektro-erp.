@@ -430,6 +430,48 @@ export async function openLocal(
         }
         return value;
       },
+      async deleteWorkItems(items) {
+        assertOpen();
+        if (header.queue)
+          throw new Error(
+            "A felhős katalógus törléséhez online kapcsolat szükséges.",
+          );
+        if (!items.length) return;
+        if (new Set(items.map((i) => i.id)).size !== items.length)
+          throw new Error("Ismétlődő munkatétel.");
+        const tx = db.transaction(["records", "meta"], "readwrite");
+        const complete = done(tx);
+        let failure: Error | undefined;
+        const store = tx.objectStore("records");
+        let checked = 0;
+        for (const item of items) {
+          const req = store.get(`work_items/${item.id}`);
+          req.onsuccess = () => {
+            if (!req.result || req.result.version !== item.version) {
+              failure = new ConflictError();
+              tx.abort();
+              return;
+            }
+            if (++checked === items.length) {
+              for (const target of items)
+                store.delete(`work_items/${target.id}`);
+              const revision = tx.objectStore("meta").get("revision");
+              revision.onsuccess = () =>
+                tx
+                  .objectStore("meta")
+                  .put({
+                    key: "revision",
+                    value: (revision.result?.value ?? 0) + 1,
+                  });
+            }
+          };
+        }
+        try {
+          await complete;
+        } catch (error) {
+          throw failure ?? error;
+        }
+      },
       async putFile(bytes, mime) {
         assertOpen();
         if (bytes.byteLength > 10485760 || !bytes.byteLength)

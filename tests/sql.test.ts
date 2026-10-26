@@ -44,6 +44,12 @@ beforeAll(async () => {
     ),
   );
   await db.exec(
+    readFileSync(
+      new URL("../supabase/migrations/003_catalog_delete.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  await db.exec(
     `insert into auth.users values ('${owner}'),('${other}'); insert into public.app_owners(user_id) values ('${owner}'),('${other}'); insert into public.companies(id,owner_id,name) values ('${tenant}','${owner}','RP'),('${tenant2}','${other}','Másik'); insert into public.partners(id,company_id,name) values ('${partner}','${tenant}','Saját ügyfél');`,
   );
 }, 30000);
@@ -51,6 +57,59 @@ afterAll(async () => {
   await db.close();
 });
 describe("A tényleges PostgreSQL-migráció jogosultságai", () => {
+  it("a katalógus törlése atomi, verzióellenőrzött, saját vállalkozásra és kétlépcsős belépésre korlátozott", async () => {
+    await auth(owner, "aal2");
+    const first = crypto.randomUUID(),
+      second = crypto.randomUUID();
+    await db.query(
+      "insert into public.work_items(id,company_id,name,unit,price_minor) values ($1,$3,'Első','db',0),($2,$3,'Második','db',0)",
+      [first, second, tenant],
+    );
+    const deletion = "select public.erp_delete_work_items($1::jsonb)";
+    await expect(
+      db.query(deletion, [
+        JSON.stringify([
+          { id: first, version: 1 },
+          { id: second, version: 2 },
+        ]),
+      ]),
+    ).rejects.toThrow("Catalog changed");
+    expect(
+      (
+        await db.query("select id from public.work_items where id in ($1,$2)", [
+          first,
+          second,
+        ])
+      ).rows,
+    ).toHaveLength(2);
+    await auth(other, "aal2");
+    await expect(
+      db.query(deletion, [JSON.stringify([{ id: first, version: 1 }])]),
+    ).rejects.toThrow("Catalog changed");
+    await auth(owner, "aal1");
+    await expect(
+      db.query(deletion, [JSON.stringify([{ id: first, version: 1 }])]),
+    ).rejects.toThrow("Two-factor");
+    await auth(owner, "aal2");
+    await db.query(deletion, [
+      JSON.stringify([
+        { id: first, version: 1 },
+        { id: second, version: 1 },
+      ]),
+    ]);
+    expect(
+      (
+        await db.query("select id from public.work_items where id in ($1,$2)", [
+          first,
+          second,
+        ])
+      ).rows,
+    ).toHaveLength(0);
+    expect(
+      (await db.query("select id from public.partners where id=$1", [partner]))
+        .rows,
+    ).toHaveLength(1);
+  });
   it("a tartós műveletazonosító elveszett válasz után sem dupláz; a mentési snapshot konzisztens", async () => {
     await auth(owner, "aal2");
     const op = crypto.randomUUID(),

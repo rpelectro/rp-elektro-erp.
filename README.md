@@ -191,3 +191,9 @@ npm.cmd run test:e2e
 ```
 
 A böngészős tesztek a már elkészített `dist` buildet indítják a 4173 porton, elkülönített böngészőadatokkal. A tesztek nem igényelnek valódi fiókot. Az élő integrációs átvételt nem helyettesítik.
+
+### Munkakatalógus végleges törlése
+
+A Beállítások → Munkakatalógus részben egyedi törlés és teljes ürítés is elérhető. A teljes ürítés az aktív és archivált munkatételeket is törli, kereséstől és szűréstől függetlenül. Megerősítéshez a `TÖRLÉS` szót kell beírni. A korábbi ajánlatok, felmérések és anyaglisták saját tételpillanatképei változatlanok; az újra importált katalógus új azonosítókat kap. A művelet nem vonható vissza (biztonsági mentés visszaállíthatja a régi katalógust is).
+
+Felhős használat előtt a Supabase SQL Editorban egyszer le kell futtatni a `supabase/migrations/003_catalog_delete.sql` fájlt. A migráció csak a törlés lehetőségét telepíti, önmagában nem töröl adatot. A törlés hitelesített, kétlépcsős belépést igényel, vállalkozásonként elkülönített és verzióellenőrzött; hibánál a teljes kijelölés érintetlen marad. Offline felhős használatnál előbb szinkronizálni kell minden helyi módosítást, és a törléshez élő kapcsolat szükséges. Helyi próbamódban a törlés a titkosított adattárra korlátozódik.

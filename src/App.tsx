@@ -54,6 +54,7 @@ import { WorkspaceSettings } from "./WorkspaceSettings";
 import { SyncBar } from "./SyncBar";
 import { Upcoming } from "./Upcoming";
 import { CatalogImport } from "./CatalogImport";
+import { CatalogDelete } from "./CatalogDelete";
 import { LongText } from "./LongText";
 
 type Page =
@@ -668,6 +669,12 @@ export function App({
                   {settingsTab === "catalog" && (
                     <>
                       <CatalogImport repo={repo} data={data} reload={reload} />
+                      <CatalogDelete
+                        repo={repo}
+                        items={data.work_items}
+                        reload={reload}
+                        all
+                      />
                       <Toolbar
                         search={search}
                         setSearch={setSearch}
@@ -737,6 +744,11 @@ export function App({
                                             void toggle("work_items", w)
                                           }
                                           compact
+                                        />
+                                        <CatalogDelete
+                                          repo={repo}
+                                          items={[w]}
+                                          reload={reload}
                                         />
                                       </div>
                                     </td>

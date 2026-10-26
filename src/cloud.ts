@@ -99,6 +99,18 @@ export async function cloudRepository(
       }
       return result.data as Tables[K];
     },
+    async deleteWorkItems(items) {
+      if (!items.length) return;
+      const result = await client.rpc("erp_delete_work_items", { items });
+      if (result.error) {
+        if (result.error.code === "40001") throw new ConflictError();
+        if (["PGRST202", "42883"].includes(result.error.code))
+          throw new Error(
+            "A törléshez futtasd le a 003_catalog_delete.sql adatbázis-frissítést a Supabase SQL Editorban.",
+          );
+        throw new Error(result.error.message);
+      }
+    },
     async applyOperation(operation) {
       const { sequence, ...body } = operation;
       const result = await client.rpc("erp_apply", body);

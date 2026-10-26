@@ -84,6 +84,21 @@ export function wrapOffline(
       window.dispatchEvent(new Event("erp-local-saved"));
       return saved;
     },
+    async deleteWorkItems(items) {
+      if (!navigator.onLine)
+        throw new Error("A törléshez internetkapcsolat szükséges.");
+      if (running) await running;
+      if ((await local.operations()).length || conflicts.length)
+        throw new Error(
+          "Törlés előtt szinkronizáld a helyi módosításokat és rendezd az ütközéseket.",
+        );
+      const remote = await provider();
+      if (!remote.deleteWorkItems)
+        throw new Error("Az adattár nem támogatja a törlést.");
+      await remote.deleteWorkItems(items);
+      await local.refresh(await remote.load());
+      window.dispatchEvent(new Event("erp-sync-complete"));
+    },
     putFile: (...args) => local.putFile(...args),
     async getFile(key) {
       try {
